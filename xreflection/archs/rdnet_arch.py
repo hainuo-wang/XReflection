@@ -8,13 +8,11 @@ import torch
 import torch.nn as nn
 from timm.models.layers import trunc_normal_
 from xreflection.utils.registry import ARCH_REGISTRY
-# import sys
-# sys.path.append('basicr/archs')
-from .classifier import PretrainedConvNextV2
-from .focalnet import build_focalnet
-from .modules_sig import ConvNextBlock, Decoder, LayerNorm, NAFBlock, SimDecoder, UpSampleConvnext
-from .revcol_function import ReverseFunction
-
+from xreflection.archs.rdnet.classifier import PretrainedConvNextV2
+from xreflection.archs.rdnet.focalnet import build_focalnet
+from xreflection.archs.rdnet.modules_sig import ConvNextBlock, Decoder, LayerNorm, NAFBlock, SimDecoder, UpSampleConvnext
+from xreflection.archs.rdnet.revcol_function import ReverseFunction
+from xreflection.models.model_zoo import prepare_model_path
 
 class Fusion(nn.Module):
     def __init__(self, level, channels, first_col) -> None:
@@ -130,63 +128,6 @@ class SubNet(nn.Module):
             data.abs_().clamp_(value)
             data *= sign
 
-
-class FullNet(nn.Module):
-    def __init__(self, channels=[32, 64, 96, 128], layers=[2, 3, 6, 3], num_subnet=5, loss_col=4, kernel_size=3,
-                 num_classes=1000,
-                 drop_path=0.0, save_memory=True, inter_supv=True, head_init_scale=None, pretrained_cols=16) -> None:
-        super().__init__()
-        self.num_subnet = num_subnet
-        self.Loss_col = (loss_col + 1)
-        self.inter_supv = inter_supv
-        self.channels = channels
-        self.layers = layers
-        self.stem_comp = nn.Sequential(
-            nn.Conv2d(3, channels[0], kernel_size=5, stride=2, padding=2),
-            LayerNorm(channels[0], eps=1e-6, data_format="channels_first")
-        )
-        dp_rate = [x.item() for x in torch.linspace(0, drop_path, sum(layers))]
-        for i in range(num_subnet):
-            first_col = True if i == 0 else False
-            self.add_module(f'subnet{str(i)}', SubNet(
-                channels, layers, kernel_size, first_col,
-                dp_rates=dp_rate, save_memory=save_memory,
-                block_type=NAFBlock))
-
-        channels.reverse()
-        self.decoder_blocks = nn.ModuleList(
-            [Decoder(depth=[1, 1, 1, 1], dim=channels, block_type=NAFBlock, kernel_size=3) for _ in
-             range(3)])
-
-        self.apply(self._init_weights)
-
-    def forward(self, x_in):
-        # 2 3 224 224
-        x_cls_out = []
-        x_img_out = []
-        c0, c1, c2, c3 = 0, 0, 0, 0
-        interval = self.num_subnet // 4
-        # x_in = x
-        x = self.stem_comp(x_in)
-        for i in range(self.num_subnet):
-            c0, c1, c2, c3 = getattr(self, f'subnet{str(i)}')(x, c0, c1, c2, c3)
-            if i > (self.num_subnet - self.Loss_col):
-                x_img_out.append(torch.cat([x_in, x_in], dim=-3) - self.decoder_blocks[-1](c3, c2, c1, c0))
-            # if (i + 1) % interval == 0:
-            #     if i == self.num_subnet - 1:
-            #         x_img_out.append(self.decoder_blocks[-1](c3, c2, c1, c0))
-
-        return x_cls_out, x_img_out
-
-    def _init_weights(self, module):
-        if isinstance(module, nn.Conv2d):
-            trunc_normal_(module.weight, std=.02)
-            nn.init.constant_(module.bias, 0)
-        elif isinstance(module, nn.Linear):
-            trunc_normal_(module.weight, std=.02)
-            nn.init.constant_(module.bias, 0)
-
-
 ##-------------------------------------- Tiny -----------------------------------------
 class StarReLU(nn.Module):
     """
@@ -209,23 +150,21 @@ class StarReLU(nn.Module):
 
 
 @ARCH_REGISTRY.register()
-class FullNet_NLP(nn.Module):
+class RDNet(nn.Module):
     def __init__(self, channels=[64, 128, 256, 512], layers=[2, 3, 6, 3], num_subnet=5, loss_col=4, kernel_size=3,
                  num_classes=1000,
-                 drop_path=0.0, save_memory=True, inter_supv=True, head_init_scale=None, pretrained_cols=16) -> None:
+                 drop_path=0.0, save_memory=True, 
+                 inter_supv=True, head_init_scale=None, 
+                 pretrained_cols=16,
+                 pretrained_models=None,
+                 ) -> None:
         super().__init__()
 
         self.num_subnet = num_subnet
         self.Loss_col = (loss_col + 1)
-        # self.inter_supv = inter_supv
-        # self.channels = [64, 128, 256, 512]  # channels
-        # self.layers = layers
-        # self.stem_comp = nn.Sequential(
-        #     nn.Conv2d(3, channels[0], kernel_size=5, stride=2, padding=2),
-        #     LayerNorm(channels[0], eps=1e-6, data_format="channels_first")
-        # )
 
         dp_rate = [x.item() for x in torch.linspace(0, drop_path, sum(layers))]
+        
         for i in range(num_subnet):
             first_col = True if i == 0 else False
             self.add_module(f'subnet{str(i)}', SubNet(
@@ -242,53 +181,76 @@ class FullNet_NLP(nn.Module):
                                     StarReLU(),
                                     nn.Conv2d(512, 64, kernel_size=1)
                                     )
-        self.classifier = PretrainedConvNextV2()
-        self.classifier.load_state_dict(torch.load('/home/wanghainuo/workspace/xreflection/weights/cls_mode_ntire_94.pt', map_location='cpu')['icnn'], strict=False)
-        for param in self.classifier.parameters():
-            param.requires_grad = False
-        self.apply(self._init_weights)
-        self.baseball = build_focalnet('focalnet_L_384_22k_fl4')
-        print(type(self.baseball))
+        pretrained_cls_path = pretrained_models.pop('cls_model', None)
+        pretrained_base_network_path = pretrained_models.pop('base_network', None)
+        
         self.baseball_adapter = nn.ModuleList()
         self.baseball_adapter.append(nn.Conv2d(192, 64, kernel_size=1))
         self.baseball_adapter.append(nn.Conv2d(192, 64, kernel_size=1))
         self.baseball_adapter.append(nn.Conv2d(192 * 2, 64 * 2, kernel_size=1))
         self.baseball_adapter.append(nn.Conv2d(192 * 4, 64 * 4, kernel_size=1))
         self.baseball_adapter.append(nn.Conv2d(192 * 8, 64 * 8, kernel_size=1))
-        self.baseball.load_state_dict(torch.load('/home/wanghainuo/workspace/xreflection/weights/focal.pth', map_location='cpu'))
+
+
+        self.baseball = build_focalnet('focalnet_L_384_22k_fl4')
+        self.classifier = PretrainedConvNextV2()
+        
+        for param in self.classifier.parameters():
+            param.requires_grad = False
+
+            
+        if pretrained_cls_path is not None:
+            pretrained_cls_path = prepare_model_path(pretrained_cls_path)
+            self.classifier.load_state_dict(torch.load(pretrained_cls_path, map_location='cpu')['icnn'], strict=False)
+
+        if pretrained_base_network_path is not None:
+            pretrained_base_network_path = prepare_model_path(pretrained_base_network_path)
+            self.baseball.load_state_dict(torch.load(pretrained_base_network_path, map_location='cpu'))
+
+    def get_optimizer_params(self):
+        # Setup different parameter groups with their learning rates
+        train_opt = self.opt['train']
+        params_lr = [
+            {'params': self.net_g.get_baseball_params(), 'lr': train_opt['optim_g']['baseball_lr']},
+            {'params': self.net_g.get_other_params(), 'lr': train_opt['optim_g']['other_lr']},
+        ]
+
+        # Get optimizer configuration without modifying original config
+        optim_type = train_opt['optim_g']['type']
+        optim_config = {k: v for k, v in train_opt['optim_g'].items()
+                        if k not in ['type', 'baseball_lr', 'other_lr']}
+
+        return {
+            'params': params_lr,
+            'type': optim_type,
+            **optim_config
+        }
 
     def forward(self, x_in, prompt=True):
-        # 2 3 224 224
-        with torch.autocast(enabled=True, device_type='cuda'):
-            x_cls_out = []
-            x_img_out = []
-            c0, c1, c2, c3 = 0, 0, 0, 0
-            interval = self.num_subnet // 4
 
-            x_base, x_stem = self.baseball(x_in)
-            c0, c1, c2, c3 = x_base
-            x_stem = self.baseball_adapter[0](x_stem)
-            c0, c1, c2, c3 = self.baseball_adapter[1](c0), \
-                self.baseball_adapter[2](c1), \
-                self.baseball_adapter[3](c2), \
-                self.baseball_adapter[4](c3)
-            # x_in = x
-            with torch.no_grad():
-                self.classifier.eval()
-                prompt = self.classifier(x_in)
-            prompt = self.prompt(prompt)
-            x = prompt * x_stem
+        x_cls_out = []
+        x_img_out = []
+        c0, c1, c2, c3 = 0, 0, 0, 0
+        interval = self.num_subnet // 4
 
-            # x=torch.cat([x,x],dim=-3)
-            for i in range(self.num_subnet):
-                c0, c1, c2, c3 = getattr(self, f'subnet{str(i)}')(x, c0, c1, c2, c3)
-                if i > (self.num_subnet - self.Loss_col):
-                    x_img_out.append(torch.cat([x_in, x_in], dim=-3) - self.decoder_blocks(c3, c2, c1, c0))
-                # if (i + 1) % interval == 0:
-                #     if i == self.num_subnet - 1:
-                #         x_img_out.append(self.decoder_blocks[-1](c3, c2, c1, c0))
-
-            return x_cls_out, x_img_out
+        x_base, x_stem = self.baseball(x_in)
+        c0, c1, c2, c3 = x_base
+        x_stem = self.baseball_adapter[0](x_stem)
+        c0, c1, c2, c3 = self.baseball_adapter[1](c0), \
+            self.baseball_adapter[2](c1), \
+            self.baseball_adapter[3](c2), \
+            self.baseball_adapter[4](c3)
+        # x_in = x
+        with torch.no_grad():
+            self.classifier.eval()
+            prompt = self.classifier(x_in)
+        prompt = self.prompt(prompt)
+        x = prompt * x_stem
+        for i in range(self.num_subnet):
+            c0, c1, c2, c3 = getattr(self, f'subnet{str(i)}')(x, c0, c1, c2, c3)
+            if i > (self.num_subnet - self.Loss_col):
+                x_img_out.append(torch.cat([x_in, x_in], dim=-3) - self.decoder_blocks(c3, c2, c1, c0))
+        return x_cls_out, x_img_out
 
     def _init_weights(self, module):
         if isinstance(module, nn.Conv2d):

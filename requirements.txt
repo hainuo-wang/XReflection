@@ -1,0 +1,12 @@
+# Core dependencies
+pybind11
+opencv-python
+pillow
+scipy
+tqdm
+torch
+torchvision
+pytorch-msssim
+lightning
+# For tensorboard event processing
+tensorboard 

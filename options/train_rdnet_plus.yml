@@ -25,17 +25,10 @@ lightning:
 
 # checkpoint settings
 checkpoint:
-  monitor: 'val/psnr'  # Metric to monitor for best model
+  monitor: 'val/psnr/dataloader_idx_0'  # 恢复到原来的val/psnr格式
   mode: 'max'  # 'max' for psnr, 'min' for loss
   save_top_k: 10
   save_last: true
-
-# optional early stopping
-early_stopping:
-  monitor: 'val/psnr'
-  patience: 100
-  mode: 'max'
-  min_delta: 0.01
 
 # dataset and data loader settings
 datasets:
@@ -60,6 +53,51 @@ datasets:
     dataset_enlarge_ratio: 1
     prefetch_mode: ~
 
+  # 多个验证数据集配置，使用列表形式
+  val_datasets:
+    # 第一个验证数据集
+    - name: NTIRE
+      type: DSRTestDataset
+      mode: eval
+      datadir: /mnt/hugedisk/whn/datasets/ntire2025/test
+      inp_path: /opt/datasets/ntire2025/test/transmission_layer
+      fns: null
+      size: null
+      enable_transforms: False
+      unaligned_transforms: False
+      round_factor: 1
+      flag: null
+      if_align: True
+      io_backend:
+        type: disk
+      
+      # data loader for validation
+      use_shuffle: false
+      num_worker_per_gpu: 4
+      batch_size_per_gpu: 1
+    
+    # 第二个验证数据集
+    - name: NTIRE2
+      type: DSRTestDataset
+      mode: eval
+      datadir: /mnt/hugedisk/whn/datasets/ntire2025/test
+      inp_path: /opt/datasets/ntire2025/test/transmission_layer
+      fns: null
+      size: null
+      enable_transforms: False
+      unaligned_transforms: False
+      round_factor: 1
+      flag: null
+      if_align: True
+      io_backend:
+        type: disk
+      
+      # data loader for validation
+      use_shuffle: false
+      num_worker_per_gpu: 4
+      batch_size_per_gpu: 1
+
+  # 保留原有验证数据集配置以保持兼容性
   val:
     name: NTIRE
     type: DSRTestDataset
@@ -77,25 +115,6 @@ datasets:
       type: disk
     
     # data loader for validation
-    use_shuffle: false
-    num_worker_per_gpu: 4
-    batch_size_per_gpu: 1
-
-  test:
-    name: NTIRE_Test
-    type: DSRTestDataset
-    datadir: /mnt/hugedisk/whn/datasets/ntire2025/test  # Change to test set when available
-    fns: null
-    size: null
-    enable_transforms: True
-    unaligned_transforms: False
-    round_factor: 1
-    flag: null
-    if_align: True
-    io_backend:
-      type: disk
-    
-    # data loader for testing
     use_shuffle: false
     num_worker_per_gpu: 4
     batch_size_per_gpu: 1

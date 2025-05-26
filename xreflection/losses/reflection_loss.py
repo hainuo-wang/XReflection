@@ -147,7 +147,7 @@ class PercepLoss(nn.Module):
                  range_norm=False,
                  perceptual_weight=1.0,
                  style_weight=0.,
-                 use_compile=False,
+                 use_compile=True,
                  criterion='l1'):
         super(PercepLoss, self).__init__()
         self.perceptual_weight = perceptual_weight

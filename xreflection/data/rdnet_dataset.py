@@ -37,7 +37,7 @@ def __scale_height(img, target_height):
     return img.resize((w, h), Image.BICUBIC)
 
 
-def paired_data_transforms(img_1, img_2, unaligned_transforms=False):
+def paired_data_transforms(img_1, img_2, transfrom_size=320, unaligned_transforms=False):
     def get_params(img, output_size):
         w, h = img.size
         th, tw = output_size
@@ -48,7 +48,7 @@ def paired_data_transforms(img_1, img_2, unaligned_transforms=False):
         j = random.randint(0, w - tw)
         return i, j, th, tw
 
-    target_size = int(random.randint(384, 640) / 2.) * 2
+    target_size = int(random.randint(transfrom_size, transfrom_size + 256) / 2.) * 2
     ow, oh = img_1.size
     if ow >= oh:
         img_1 = __scale_height(img_1, target_size)
@@ -66,7 +66,7 @@ def paired_data_transforms(img_1, img_2, unaligned_transforms=False):
         img_1 = TF.rotate(img_1, angle)
         img_2 = TF.rotate(img_2, angle)
 
-    i, j, h, w = get_params(img_1, (384, 384))
+    i, j, h, w = get_params(img_1, (transfrom_size, transfrom_size))
     img_1 = TF.crop(img_1, i, j, h, w)
 
     if unaligned_transforms:
@@ -156,6 +156,7 @@ class DSRDataset(BaseDataset):
         if self.size is not None:
             self.paths = np.random.choice(self.paths, self.size)
 
+        self.transform_size = opt.get('transform_size', 320)
         self.syn_model = ReflectionSynthesis()
         self.reset(shuffle=False)
 
@@ -168,7 +169,7 @@ class DSRDataset(BaseDataset):
 
     def data_synthesis(self, t_img, r_img):
         if self.enable_transforms:
-            t_img, r_img = paired_data_transforms(t_img, r_img)
+            t_img, r_img = paired_data_transforms(t_img, r_img, transfrom_size=self.transform_size)
 
         t_img, r_img, m_img = self.syn_model(t_img, r_img)
 
@@ -204,27 +205,29 @@ class DSRTestDataset(BaseDataset):
     def __init__(self, opt):
         super(DSRTestDataset, self).__init__()
         self.opt = opt
-        self.size = opt['size']
+        self.size = opt.get('size', None)
         self.datadir = opt['datadir']
         self.mode = opt.get('mode', None)
 
-        if opt['fns'] is None:
+        if opt.get('fns', None) is None:
             self.fns = os.listdir(join(opt['datadir'], 'blended'))
         else:
             self.fns = read_fns(opt['fns'])
 
-        self.enable_transforms = opt['enable_transforms']
-        self.unaligned_transforms = opt['unaligned_transforms']
-        self.round_factor = opt['round_factor']
-        self.flag = opt['flag']
-        self.if_align = True  # if_align
+        self.enable_transforms = opt.get('enable_transforms', False)
+        self.unaligned_transforms = opt.get('unaligned_transforms', False)
+        self.transform_size = opt.get('transform_size', 320)
+        self.round_factor = opt.get('round_factor', 5)
+        self.flag = opt.get('flag', None)
+        self.if_align = opt.get('if_align', True)  # if_align
 
         if self.size is not None:
             self.fns = self.fns[:self.size]
 
     def align(self, x1, x2):
+        round_factor = 2 ** self.round_factor
         h, w = x1.height, x1.width
-        h, w = h // 32 * 32, w // 32 * 32
+        h, w = h // round_factor * round_factor, w // round_factor * round_factor
         x1 = x1.resize((w, h))
         x2 = x2.resize((w, h))
         return x1, x2
@@ -239,17 +242,9 @@ class DSRTestDataset(BaseDataset):
             t_img, m_img = self.align(t_img, m_img)
 
         if self.enable_transforms:
-            t_img, m_img = paired_data_transforms(t_img, m_img, self.unaligned_transforms)
+            t_img, m_img = paired_data_transforms(t_img, m_img, transfrom_size=self.transform_size, 
+                                                  unaligned_transforms=self.unaligned_transforms)
 
-        if self.mode == "eval":
-            w, h = t_img.size
-            if max(w, h) > 512:
-                if h > w:
-                    t_img = t_img.resize((int(w * 512 / h), 512), Image.BILINEAR)
-                    m_img = m_img.resize((int(w * 512 / h), 512), Image.BILINEAR)
-                else:
-                    t_img = t_img.resize((512, int(h * 512 / w)), Image.BILINEAR)
-                    m_img = m_img.resize((512, int(h * 512 / w)), Image.BILINEAR)
 
         B = TF.to_tensor(t_img)
         M = TF.to_tensor(m_img)
@@ -264,57 +259,6 @@ class DSRTestDataset(BaseDataset):
             return min(len(self.fns), self.size)
         else:
             return len(self.fns)
-
-
-class DSRTestDataset_zhu(BaseDataset):
-    def __init__(self, datadir, fns=None, size=None, enable_transforms=False, unaligned_transforms=False,
-                 round_factor=1, flag=None, if_align=True):
-        super(DSRTestDataset_zhu, self).__init__()
-        self.size = size
-        self.datadir = datadir
-        self.fns = fns or os.listdir(join(datadir, 'blended'))
-        self.enable_transforms = enable_transforms
-        self.unaligned_transforms = unaligned_transforms
-        self.round_factor = round_factor
-        self.flag = flag
-        self.if_align = True  # if_align
-
-        if size is not None:
-            self.fns = self.fns[:size]
-
-    def align(self, x1, x2):
-        h, w = x1.height, x1.width
-        h, w = h // 32 * 32, w // 32 * 32
-        x1 = x1.resize((w, h))
-        x2 = x2.resize((w, h))
-        return x1, x2
-
-    def __getitem__(self, index):
-        fn = self.fns[index]
-
-        t_img = Image.open(join(self.datadir, 'transmission_layer', fn)).convert('RGB')
-        m_img = Image.open(join(self.datadir, 'blended', fn)).convert('RGB')
-
-        if self.if_align:
-            t_img, m_img = self.align(t_img, m_img)
-
-        if self.enable_transforms:
-            t_img, m_img = paired_data_transforms(t_img, m_img, self.unaligned_transforms)
-
-        B = TF.to_tensor(t_img)
-        M = TF.to_tensor(m_img)
-
-        dic = {'input': M, 'target_t': B, 'fn': fn, 'real': True, 'target_r': M - B}
-        if self.flag is not None:
-            dic.update(self.flag)
-        return dic
-
-    def __len__(self):
-        if self.size is not None:
-            return min(len(self.fns), self.size)
-        else:
-            return len(self.fns)
-
 
 class SIRTestDataset(BaseDataset):
     def __init__(self, datadir, fns=None, size=None, if_align=True):
@@ -389,26 +333,29 @@ class RealDataset(BaseDataset):
         else:
             return len(self.fns)
 
+DATASET_TYPES = {
+    'DSRDataset': DSRDataset,
+    'DSRTestDataset': DSRTestDataset,
+    'RealDataset': RealDataset,
+}
 
 @DATASET_REGISTRY.register()
 class FusionDataset(BaseDataset):
     def __init__(self, opt):
+        super(FusionDataset, self).__init__()
 
-        train_dataset_syn_opt = opt['train_dataset_syn']
-        train_dataset_real_opt = opt['train_dataset_real']
-        train_dataset_nature_opt = opt['train_dataset_nature']
-        train_dataset_ntire_opt = opt['train_dataset_ntire']
-
-        train_syn_dataset = DSRDataset(train_dataset_syn_opt)
-        train_dataset_real = DSRTestDataset(train_dataset_real_opt)
-        train_dataset_nature = DSRTestDataset(train_dataset_nature_opt)
-        train_dataset_ntire = DSRTestDataset(train_dataset_ntire_opt)
-
-        datasets = [train_syn_dataset, train_dataset_real, train_dataset_nature, train_dataset_ntire]
+        datasets = []
+        fusion_ratios = []
+        for dataset_opt in opt['fused_datasets']:
+            ratio = dataset_opt.pop('ratio')
+            fusion_ratios.append(ratio)
+            dataset = DATASET_TYPES[dataset_opt['type']](dataset_opt)
+            datasets.append(dataset)
 
         self.datasets = datasets
         self.size = sum([len(dataset) for dataset in datasets])
-        self.fusion_ratios = opt['fusion_ratios'] or [1. / len(datasets)] * len(datasets)
+        self.fusion_ratios = fusion_ratios
+        
         print('[i] using a fusion dataset: %d %s imgs fused with ratio %s' % (
             self.size, [len(dataset) for dataset in datasets], self.fusion_ratios))
 
