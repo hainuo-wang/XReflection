@@ -1,6 +1,7 @@
 import lightning as L
 import torch
 import os
+import re
 from os import path as osp
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -37,6 +38,8 @@ class BaseModel(L.LightningModule):
 
         self.current_val_metrics = {}
         self.val_dataset_names = {}
+        self.top_psnr_epochs = []
+        self.top_ssim_epochs = []
 
         # Flag to indicate if using EMA - will be set by EMACallback
         self.use_ema = False
@@ -263,7 +266,7 @@ class BaseModel(L.LightningModule):
         if self.current_val_metrics:
             total_average_metrics = {}
             for dataset_name, metrics in self.current_val_metrics.items():
-                log_str = f'Validation [{dataset_name}] Epoch {self.current_epoch}\n'
+                log_str = f'\n Validation [{dataset_name}] Epoch {self.current_epoch}\n'
 
                 for metric_name, values in metrics.items():
                     
@@ -292,12 +295,24 @@ class BaseModel(L.LightningModule):
                     f'metrics/average/{metric_name}', metric_value, self.current_epoch
                 )
             
-            log_str = f'Validation Epoch {self.current_epoch} Average Metrics:\n'
+            log_str = f'\n Validation Epoch {self.current_epoch} Average Metrics:\n'
             for metric_name, metric_value in total_average_metrics.items():
-                log_str += f'\t # {metric_name}: {metric_value:.4f}\n'
+                log_str += f'\t # {metric_name}: {metric_value:.4f}'
                 self.log(f'metrics/average/{metric_name}', metric_value, sync_dist=True)
-                
+            
             rank_zero_info(log_str)
+            
+            self.top_psnr_epochs.append((total_average_metrics['psnr'], self.current_epoch))
+            self.top_psnr_epochs.sort(key=lambda x: (x[0], x[1]), reverse=True)
+            self.top_psnr_epochs = self.top_psnr_epochs[:self.opt['val'].get('save_img_top_n', 5)]
+            rank_zero_info(f'\t # The Best Average PSNR: {self.top_psnr_epochs[0][0]:.4f} at Epoch {self.top_psnr_epochs[0][1]}')
+            
+            self.top_ssim_epochs.append((total_average_metrics['ssim'], self.current_epoch))
+            self.top_ssim_epochs.sort(key=lambda x: (x[0], x[1]), reverse=True)
+            self.top_ssim_epochs = self.top_ssim_epochs[:1]
+            rank_zero_info(f'\t # The Best Average SSIM: {self.top_ssim_epochs[0][0]:.4f} at Epoch {self.top_ssim_epochs[0][1]}\n')
+            
+            self._delete_images_not_in_top_psnr()
 
     def test_step(self, batch, batch_idx):
         """Test step.
@@ -392,7 +407,6 @@ class BaseModel(L.LightningModule):
     
     def _save_images(self, clean_img, reflection_img, img_name, dataset_name):
         try:
-        # 在测试过程中保存图像
             save_dir = osp.join(self.opt['path']['visualization'], dataset_name, img_name)
             os.makedirs(save_dir, exist_ok=True)
             if self.opt['val'].get('suffix'):
@@ -406,3 +420,36 @@ class BaseModel(L.LightningModule):
             imwrite(reflection_img, save_reflection_img_path)
         except Exception as e:
             rank_zero_warn(f"Error saving validation images: {str(e)}")
+    
+    def _delete_images_not_in_top_psnr(self):
+        top_epochs_to_keep = [e for _, e in self.top_psnr_epochs]
+        visualization_root_path = self.opt['path']['visualization']
+
+        if not osp.isdir(visualization_root_path):
+            rank_zero_warn(f"Visualization directory not found: {visualization_root_path}")
+            return
+
+        for root, _, files in os.walk(visualization_root_path):
+            for file_name in files:
+                # Optional: filter for common image file extensions
+                if not file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
+                    continue
+
+                file_path = osp.join(root, file_name)
+                if not osp.isfile(file_path): # Ensure it's a file before attempting to process/delete
+                    continue
+                
+                epoch_match = re.search(r'epoch_(\d+)', file_name)
+                if epoch_match:
+                    img_epoch = int(epoch_match.group(1))
+
+                    # Protect images from the current epoch and those explicitly in top_epochs_to_keep
+                    if img_epoch == self.current_epoch or img_epoch in top_epochs_to_keep:
+                        continue
+                    
+                    # If the epoch is not the current one and not in top_epochs_to_keep, delete it
+                    try:
+                        os.remove(file_path)
+                        # rank_zero_info(f"Deleted old image not in top PSNR epochs: {file_path}") # Optional: for verbose logging
+                    except Exception as e:
+                        rank_zero_warn(f"Error deleting image {file_path}: {str(e)}")
