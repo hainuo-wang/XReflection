@@ -116,6 +116,16 @@ class RDNetModel(BaseModel):
         self.last_target_t = target_t
 
         return l_g_total
+    
+    def testing(self, inp):
+        if self.use_ema:
+            model = self.ema_model
+        else:
+            model = self.net_g
+        with torch.no_grad():
+            x_cls_out, x_img_out = model(inp)
+            output_clean, output_reflection = x_img_out[-1][:, :3, ...], x_img_out[-1][:, 3:, ...]
+            self.output = [output_clean, output_reflection]
 
     def configure_optimizer_params(self):
         """Configure optimizer parameters.

@@ -383,22 +383,13 @@ def main():
     
     # Test only or train + validate
     if config.get('test_only', False):
-        if trainer.is_global_zero:
-            print("Running validation datasets evaluation only")
-        # 使用验证数据集进行评估而非测试数据集
-        trainer.validate(model, datamodule=datamodule, ckpt_path=resume_path)
+        trainer.test(model, datamodule=datamodule, ckpt_path=resume_path)
     else:
-        if trainer.is_global_zero:
-            print("Running training and validation")
         trainer.fit(model, datamodule=datamodule, ckpt_path=resume_path)
-            
-        # Evaluate on validation datasets after training using the best model
         if len(callbacks) > 0 and hasattr(callbacks[0], 'best_model_path'):
             best_model_path = callbacks[0].best_model_path
             if best_model_path:
-                if trainer.is_global_zero:
-                    print(f"Evaluating best model on validation datasets: {best_model_path}")
-                trainer.validate(model, datamodule=datamodule, ckpt_path=best_model_path)
+                trainer.test(model, datamodule=datamodule, ckpt_path=best_model_path)
                 
         # Close WandB logger to ensure logs are saved
         if wandb_config.get('enable', False):

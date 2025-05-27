@@ -25,7 +25,7 @@ lightning:
 
 # checkpoint settings
 checkpoint:
-  monitor: 'val/psnr/dataloader_idx_0'  # 恢复到原来的val/psnr格式
+  monitor: 'metrics/average/psnr'  # 恢复到原来的val/psnr格式
   mode: 'max'  # 'max' for psnr, 'min' for loss
   save_top_k: 10
   save_last: true
