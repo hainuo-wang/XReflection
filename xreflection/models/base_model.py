@@ -314,7 +314,7 @@ class BaseModel(L.LightningModule):
             
             self._delete_images_not_in_top_psnr()
 
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch, batch_idx, dataloader_idx=0):
         """Test step.
         
         Args:
@@ -324,11 +324,28 @@ class BaseModel(L.LightningModule):
         Returns:
             dict: Output dict with clean and reflection images.
         """
-        return self.validation_step(batch, batch_idx)
+        return self.validation_step(batch, batch_idx, dataloader_idx)
     
     def on_test_epoch_start(self):
         """Operations at the start of test epoch."""
-        return self.on_validation_epoch_start()
+        """Setup metrics collection at the start of test epoch."""
+        self.current_val_metrics = {}
+        if hasattr(self, 'trainer') and hasattr(self.trainer, 'test_dataloaders'):
+            if isinstance(self.trainer.test_dataloaders, list):
+                for idx, loader in enumerate(self.trainer.test_dataloaders):
+                    if hasattr(loader.dataset, 'opt') and 'name' in loader.dataset.opt:
+                        dataset_name = loader.dataset.opt['name']
+                    else:
+                        dataset_name = f"test_{idx}"
+                    self.val_dataset_names[idx] = dataset_name
+            else:
+                # 单个验证集情况
+                loader = self.trainer.test_dataloaders
+                if hasattr(loader.dataset, 'opt') and 'name' in loader.dataset.opt:
+                    dataset_name = loader.dataset.opt['name']
+                else:
+                    dataset_name = "test"
+                self.val_dataset_names[0] = dataset_name
     
     def on_test_epoch_end(self):
         """Operations at the end of test epoch."""

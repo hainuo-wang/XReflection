@@ -130,66 +130,40 @@ def create_datamodule(config):
                 
                 # 创建所有验证数据集
                 self.val_datasets = []
-                if 'val_datasets' in self.config['datasets']:
-                    for val_idx, val_config in enumerate(self.config['datasets']['val_datasets']):
-                        val_config['phase'] = 'val'
-                        val_dataset = build_dataset(val_config)
-                        self.val_datasets.append(val_dataset)
-                else:  # 兼容旧配置
-                    val_config = self.config['datasets'].get('val', {})
+                for val_idx, val_config in enumerate(self.config['datasets']['val_datasets']):
                     val_config['phase'] = 'val'
                     val_dataset = build_dataset(val_config)
                     self.val_datasets.append(val_dataset)
             
             if stage == 'test' or stage is None:
-                test_config = self.config['datasets']['test']
-                test_config['phase'] = 'test'
-                self.test_dataset = build_dataset(test_config)
+                self.test_datasets = []
+                # Use validation set configurations for testing as per user request
+                for val_config_original in self.config['datasets']['val_datasets']:
+                    # Create a copy to avoid modifying the original val_config
+                    test_config = val_config_original.copy()
+                    test_config['phase'] = 'test' # Set phase to test
+                    test_dataset = build_dataset(test_config)
+                    self.test_datasets.append(test_dataset)
             
         def train_dataloader(self):
-            num_gpus = 1
-            dist_mode = False
-            if self.trainer:
-                if hasattr(self.trainer, 'num_devices'):
-                    num_gpus = max(1, self.trainer.num_devices)
-                if self.trainer.strategy and "ddp" in str(self.trainer.strategy).lower():
-                    dist_mode = True
-            
-            return build_dataloader(
-                self.train_dataset,
-                self.config['datasets']['train'],
-                num_gpu=num_gpus,
-                dist=dist_mode,
-                seed=self.config.get('manual_seed')
-            )
+            return build_dataloader(self.train_dataset, self.config['datasets']['train'])
             
         def val_dataloader(self):
-            # 返回多个验证数据集的数据加载器列表
             val_loaders = []
-            
-            if 'val_datasets' in self.config['datasets']:
-                # 使用新配置格式：多个验证数据集列表
-                for val_idx, val_dataset in enumerate(self.val_datasets):
-                    val_config = self.config['datasets']['val_datasets'][val_idx]
-                    val_loaders.append(build_dataloader(
-                        val_dataset,
-                        val_config,
-                        num_gpu=1,
-                        dist=False
-                    ))
-            elif self.val_datasets:
-                # 兼容旧配置：单个验证数据集
-                val_config = self.config['datasets'].get('val', {})
-                val_loaders.append(build_dataloader(
-                    self.val_datasets[0],
-                    val_config,
-                    num_gpu=1,
-                    dist=False
-                ))
+            for val_idx, val_dataset in enumerate(self.val_datasets):
+                val_config = self.config['datasets']['val_datasets'][val_idx]
+                val_loaders.append(build_dataloader(val_dataset, val_config))
             
             return val_loaders
 
-    
+        def test_dataloader(self):
+            test_loaders = []
+            for test_idx, test_dataset in enumerate(self.test_datasets):
+                test_config = self.config['datasets']['val_datasets'][test_idx]
+                test_loaders.append(build_dataloader(test_dataset, test_config))
+            
+            return test_loaders
+        
     return ReflectionDataModule(config)
 
 

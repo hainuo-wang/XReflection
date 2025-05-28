@@ -36,7 +36,7 @@ def build_dataset(dataset_opt):
     return dataset
 
 
-def build_dataloader(dataset, dataset_opt, num_gpu=1, dist=False, sampler=None, seed=None):
+def build_dataloader(dataset, dataset_opt, sampler=None, seed=None):
     """Build dataloader.
 
     Args:
@@ -55,13 +55,8 @@ def build_dataloader(dataset, dataset_opt, num_gpu=1, dist=False, sampler=None, 
     phase = dataset_opt['phase']
     rank = os.environ.get('RANK', 0)
     if phase == 'train':
-        if dist:  # distributed training
-            batch_size = dataset_opt['batch_size_per_gpu']
-            num_workers = dataset_opt['num_worker_per_gpu']
-        else:  # non-distributed training
-            multiplier = 1 if num_gpu == 0 else num_gpu
-            batch_size = dataset_opt['batch_size_per_gpu'] * multiplier
-            num_workers = dataset_opt['num_worker_per_gpu'] * multiplier
+        batch_size = dataset_opt['batch_size_per_gpu']
+        num_workers = dataset_opt['num_worker_per_gpu']
         dataloader_args = dict(
             dataset=dataset,
             batch_size=batch_size,
