@@ -193,7 +193,8 @@ train:
 # validation settings
 val:
   save_img: True
-  
+  save_img_top_n: 5
+
   metrics:
     psnr: # metric name
       type: calculate_psnr
