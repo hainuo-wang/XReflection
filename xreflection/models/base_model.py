@@ -161,6 +161,9 @@ class BaseModel(L.LightningModule):
     def training_step(self, batch, batch_idx):
         pass
     
+    def on_train_epoch_end(self):
+        self.trainer.train_dataloader.reset()
+        
     def testing(self, inp):
         if self.use_ema:
             model = self.ema_model

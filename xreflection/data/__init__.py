@@ -1,12 +1,12 @@
+import os
 import importlib
-import numpy as np
-import random
 import torch
 import torch.utils.data
-from copy import deepcopy
+import numpy as np
+import random
 from functools import partial
+from copy import deepcopy
 from os import path as osp
-import os
 from xreflection.data.prefetch_dataloader import PrefetchDataLoader
 from xreflection.utils import scandir
 from lightning.pytorch.utilities.rank_zero import rank_zero_info
@@ -20,6 +20,17 @@ data_folder = osp.dirname(osp.abspath(__file__))
 dataset_filenames = [osp.splitext(osp.basename(v))[0] for v in scandir(data_folder) if v.endswith('_dataset.py')]
 # import all the dataset modules
 _dataset_modules = [importlib.import_module(f'xreflection.data.{file_name}') for file_name in dataset_filenames]
+
+
+class DataLoader(torch.utils.data.DataLoader):
+    def __init__(self, dataset, batch_size, shuffle, phase=None, *args, **kwargs):
+        super(DataLoader, self).__init__(dataset, batch_size, shuffle, *args, **kwargs)
+        self.phase = phase
+
+    def reset(self):
+        if self.phase == 'train':
+            rank_zero_info('Reset Dataset...')
+            self.dataset.reset()
 
 
 def build_dataset(dataset_opt):
@@ -36,7 +47,7 @@ def build_dataset(dataset_opt):
     return dataset
 
 
-def build_dataloader(dataset, dataset_opt, sampler=None, seed=None):
+def build_dataloader(dataset, dataset_opt, seed=None, sampler=None):
     """Build dataloader.
 
     Args:
@@ -63,13 +74,14 @@ def build_dataloader(dataset, dataset_opt, sampler=None, seed=None):
             shuffle=False,
             num_workers=num_workers,
             sampler=sampler,
-            drop_last=True)
+            drop_last=True,
+            phase=phase)
         if sampler is None:
             dataloader_args['shuffle'] = True
         dataloader_args['worker_init_fn'] = partial(
-            worker_init_fn, num_workers=num_workers, rank=rank, seed=seed) if seed is not None else None
+            worker_init_fn, num_workers=num_workers, rank=rank, seed=seed)
     elif phase in ['val', 'test']:  # validation
-        dataloader_args = dict(dataset=dataset, batch_size=1, shuffle=False, num_workers=0)
+        dataloader_args = dict(dataset=dataset, batch_size=1, shuffle=dataset_opt.get('use_shuffle', False), num_workers=0)
     else:
         raise ValueError(f"Wrong dataset phase: {phase}. Supported ones are 'train', 'val' and 'test'.")
 
@@ -84,8 +96,7 @@ def build_dataloader(dataset, dataset_opt, sampler=None, seed=None):
     else:
         # prefetch_mode=None: Normal dataloader
         # prefetch_mode='cuda': dataloader for CUDAPrefetcher
-        return torch.utils.data.DataLoader(**dataloader_args)
-
+        return DataLoader(**dataloader_args)
 
 def worker_init_fn(worker_id, num_workers, rank, seed):
     # Set the worker seed to num_workers * rank + worker_id + seed
