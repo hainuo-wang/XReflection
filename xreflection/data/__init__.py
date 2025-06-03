@@ -29,7 +29,7 @@ class DataLoader(torch.utils.data.DataLoader):
 
     def reset(self):
         if self.phase == 'train':
-            rank_zero_info('Reset Dataset...')
+            rank_zero_info('\n Reset Dataset...\n')
             self.dataset.reset()
 
 
