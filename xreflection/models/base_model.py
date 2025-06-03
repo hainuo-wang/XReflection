@@ -293,15 +293,14 @@ class BaseModel(L.LightningModule):
             total_average_metrics = {
                 k: v['val'] / v['counts'] for k, v in total_average_metrics.items()
             }
+            
+            log_str = f'\n Validation Epoch {self.current_epoch} Average Metrics:\n'
             for metric_name, metric_value in total_average_metrics.items():
                 self.logger.experiment.add_scalar(
                     f'metrics/average/{metric_name}', metric_value, self.current_epoch
                 )
-            
-            log_str = f'\n Validation Epoch {self.current_epoch} Average Metrics:\n'
-            for metric_name, metric_value in total_average_metrics.items():
-                log_str += f'\t # {metric_name}: {metric_value:.4f}'
                 self.log(f'metrics/average/{metric_name}', metric_value, sync_dist=True)
+                log_str += f'\t # {metric_name}: {metric_value:.4f}'
             
             rank_zero_info(log_str)
             
