@@ -1,0 +1,5 @@
+Usage
+=====
+
+.. _installation:
+
