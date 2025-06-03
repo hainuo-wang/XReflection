@@ -276,10 +276,7 @@ class BaseModel(L.LightningModule):
                     avg_value = sum(values) / len(values)
                     log_str += f'\t # {metric_name}: {avg_value:.4f}'
 
-                    # Log to tensorboard 
-                    self.logger.experiment.add_scalar(
-                        f'metrics/{dataset_name}/{metric_name}', avg_value, self.current_epoch
-                    )
+                    self.log(f'metrics/{dataset_name}/{metric_name}', avg_value, on_epoch=True, on_step=False, sync_dist=True)
                     if metric_name not in total_average_metrics.keys():
                         total_average_metrics[metric_name] = {
                             'val': sum(values),
@@ -296,10 +293,7 @@ class BaseModel(L.LightningModule):
             
             log_str = f'\n Validation Epoch {self.current_epoch} Average Metrics:\n'
             for metric_name, metric_value in total_average_metrics.items():
-                self.logger.experiment.add_scalar(
-                    f'metrics/average/{metric_name}', metric_value, self.current_epoch
-                )
-                self.log(f'metrics/average/{metric_name}', metric_value, sync_dist=True)
+                self.log(f'metrics/average/{metric_name}', metric_value, on_epoch=True, on_step=False, sync_dist=True)
                 log_str += f'\t # {metric_name}: {metric_value:.4f}'
             
             rank_zero_info(log_str)
