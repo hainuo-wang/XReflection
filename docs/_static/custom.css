@@ -1,0 +1,9 @@
+/* 按比例缩放logo - 只设置一个维度，另一个自动按比例调整 */
+.navbar-brand img {
+    height: 60px !important;
+    /* 只设置高度，宽度自动按比例缩放 */
+    width: auto !important;
+    /* 宽度自动计算保持比例 */
+    max-width: none !important;
+    max-height: none !important;
+}

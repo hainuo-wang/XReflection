@@ -1,0 +1,34 @@
+{% extends "!layout.html" %}
+
+{# 使用JavaScript在页面加载后替换logo和标题 #}
+{% block footer %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // 查找logo元素
+        var logoElement = document.querySelector('#logo');
+        if (logoElement) {
+            // 替换img标签
+            var imgElement = logoElement.querySelector('img');
+            if (imgElement) {
+                imgElement.src = '{{ pathto("_static/XReflection_logo.png", 1) }}';
+                imgElement.alt = 'XReflection Logo';
+            }
+
+            // 替换span标签中的文本
+            var spanElement = logoElement.querySelector('span');
+            if (spanElement) {
+                spanElement.textContent = 'XReflection';
+            }
+        }
+
+        // 也可以直接替换整个logo区域，只保留logo不显示文字
+        var navbar = document.querySelector('.navbar-brand');
+        if (navbar) {
+            navbar.innerHTML = `
+            <img src="{{ pathto('_static/XReflection_logo.png', 1) }}" alt="XReflection Logo" width="40px" height="40px">
+        `;
+        }
+    });
+</script>
+{% endblock %}

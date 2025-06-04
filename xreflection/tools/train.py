@@ -146,7 +146,7 @@ def create_datamodule(config):
                     self.test_datasets.append(test_dataset)
             
         def train_dataloader(self):
-            return build_dataloader(self.train_dataset, self.config['datasets']['train'])
+            return build_dataloader(self.train_dataset, self.config['datasets']['train'], seed=self.config['manual_seed'])
             
         def val_dataloader(self):
             val_loaders = []

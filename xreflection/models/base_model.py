@@ -161,6 +161,9 @@ class BaseModel(L.LightningModule):
     def training_step(self, batch, batch_idx):
         pass
     
+    def on_train_epoch_end(self):
+        self.trainer.train_dataloader.reset()
+        
     def testing(self, inp):
         if self.use_ema:
             model = self.ema_model
@@ -273,10 +276,7 @@ class BaseModel(L.LightningModule):
                     avg_value = sum(values) / len(values)
                     log_str += f'\t # {metric_name}: {avg_value:.4f}'
 
-                    # Log to tensorboard 
-                    self.logger.experiment.add_scalar(
-                        f'metrics/{dataset_name}/{metric_name}', avg_value, self.current_epoch
-                    )
+                    self.log(f'metrics/{dataset_name}/{metric_name}', avg_value, on_epoch=True, on_step=False, sync_dist=True)
                     if metric_name not in total_average_metrics.keys():
                         total_average_metrics[metric_name] = {
                             'val': sum(values),
@@ -290,15 +290,11 @@ class BaseModel(L.LightningModule):
             total_average_metrics = {
                 k: v['val'] / v['counts'] for k, v in total_average_metrics.items()
             }
-            for metric_name, metric_value in total_average_metrics.items():
-                self.logger.experiment.add_scalar(
-                    f'metrics/average/{metric_name}', metric_value, self.current_epoch
-                )
             
             log_str = f'\n Validation Epoch {self.current_epoch} Average Metrics:\n'
             for metric_name, metric_value in total_average_metrics.items():
+                self.log(f'metrics/average/{metric_name}', metric_value, on_epoch=True, on_step=False, sync_dist=True)
                 log_str += f'\t # {metric_name}: {metric_value:.4f}'
-                self.log(f'metrics/average/{metric_name}', metric_value, sync_dist=True)
             
             rank_zero_info(log_str)
             

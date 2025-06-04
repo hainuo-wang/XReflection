@@ -1,7 +1,18 @@
 import queue as Queue
 import threading
 import torch
-from torch.utils.data import DataLoader
+from lightning.fabric.utilities import rank_zero_info
+
+
+class DataLoader(torch.utils.data.DataLoader):
+    def __init__(self, dataset, batch_size, shuffle, phase=None, *args, **kwargs):
+        super(DataLoader, self).__init__(dataset, batch_size, shuffle, *args, **kwargs)
+        self.phase = phase
+
+    def reset(self):
+        if self.phase == 'train':
+            rank_zero_info('\n Reset Dataset...\n')
+            self.dataset.reset()
 
 
 class PrefetchGenerator(threading.Thread):

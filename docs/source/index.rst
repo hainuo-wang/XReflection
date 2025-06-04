@@ -7,8 +7,9 @@ XReflection is a neat toolbox tailored for single-image reflection removal (SIRR
 We offer state-of-the-art SIRR solutions for training and inference, 
 with a high-performance data pipeline, multi-GPU/TPU/NPU support, and more!
 
+
 📰 News and Updates
-==================
+====================
 
 - **[Upcoming]** More models are on the way!
 - **[2025-05-26]** Release a training/testing pipeline.
@@ -24,7 +25,7 @@ with a high-performance data pipeline, multi-GPU/TPU/NPU support, and more!
 📝 Introduction
 ===============
 
-Please visit the documentation for more features and usage.
+Please visit the `Installation <Installation.html>`_ for more features and usage.
 
 🚀 Installation
 ===============
@@ -34,10 +35,10 @@ Requirements
 
 Make sure you have the following system dependencies installed:
 
-- Python >= 3.8
-- PyTorch >= 1.10
-- PyTorchLightning >= 1.5
-- CUDA >= 11.2 (for GPU support)
+- Python >= 3.10
+- PyTorch >= 2.5
+- PyTorchLightning >= 2.5
+- CUDA >= 12.1 (for GPU support)
 
 Installation Commands
 ---------------------
@@ -45,11 +46,12 @@ Installation Commands
 .. code-block:: bash
 
    # Clone the repository
-   git clone https://github.com/your-username/XReflection.git
+   git clone https://github.com/hainuo-wang/XReflection.git
    cd XReflection
 
    # Install dependencies
    pip install -r requirements.txt
+   python setup.py develop
 
 📦 Getting Started
 ==================
@@ -61,9 +63,7 @@ Run reflection removal on an image:
 
 .. code-block:: python
 
-   from xreflection import inference
-
-   result = inference.run("path_to_your_image.jpg", model_name="default_model")
+      TODO
 
 Training a Model
 ----------------
@@ -75,11 +75,23 @@ Training a Model
 Data Preparation
 ----------------
 
-Generate synthetic reflection datasets:
+Training dataset
+~~~~~~~~~~~~~~~~
 
-.. code-block:: bash
+- 7,643 images from the `Pascal VOC dataset <http://host.robots.ox.ac.uk/pascal/VOC/>`_, center-cropped as 224 x 224 slices to synthesize training pairs.
+- 90 real-world training pairs provided by `Zhang et al. <https://github.com/ceciliavision/perceptual-reflection-removal>`_.
+- 200 real-world training pairs provided by `IBCLN <https://github.com/JHL-HUST/IBCLN>`_ (In our training setting 2, † labeled in our paper).
 
-   python tools/data_pipeline.py --input_dir ./raw_images --output_dir ./synthetic_data
+
+Testing dataset
+~~~~~~~~~~~~~~~
+
+- 45 real-world testing images from `CEILNet dataset <https://github.com/fqnchina/CEILNet>`_.
+- 20 real testing pairs provided by `Zhang et al. <https://github.com/ceciliavision/perceptual-reflection-removal>`_.
+- 20 real testing pairs provided by `IBCLN <https://github.com/JHL-HUST/IBCLN>`_.
+- 454 real testing pairs from `SIR² dataset <https://sir2data.github.io/>`_, containing three subsets (i.e., Objects (200), Postcard (199), Wild (55)).
+
+Download all in one from `https://checkpoints.mingjia.li/sirs.zip <https://checkpoints.mingjia.li/sirs.zip>`_
 
 🌟 Features in Detail
 =====================
@@ -89,15 +101,8 @@ Pretrained Model Zoo
 
 Access pretrained models for various SIRR algorithms:
 
-+----------------+---------------------+---------------------+
-| Model Name     | Description         | Performance Metrics |
-+================+=====================+=====================+
-| Default Model  | General SIRR        | PSNR: 32.5, SSIM:  |
-|                |                     | 0.85                |
-+----------------+---------------------+---------------------+
-| Enhanced Model | Optimized structure | PSNR: 34.3, SSIM:  |
-|                |                     | 0.88                |
-+----------------+---------------------+---------------------+
+TODO
+
 
 🙏 License and Acknowledgement
 ==============================
@@ -110,3 +115,10 @@ The authors would express gratitude to the computational resource support from G
 ==========
 
 If you have any questions, please email **peiyuan_he@tju.edu.cn**
+
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+
+   Installation
+   api
