@@ -13,6 +13,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint, LearningRateMonitor, Ea
 from lightning.pytorch.loggers import TensorBoardLogger, WandbLogger
 from lightning.pytorch.strategies import DDPStrategy
 from lightning.pytorch.plugins import BitsandbytesPrecision
+from lightning.pytorch.utilities import rank_zero_info
 
 from xreflection.models import build_model
 from xreflection.utils.ema_callback import EMACallback
@@ -345,9 +346,7 @@ def main():
     trainer = L.Trainer(**trainer_kwargs)
     
     # Print configuration only on main process using Lightning's trainer
-    if trainer.is_global_zero:
-        print("Configuration:")
-        pprint(config)
+    rank_zero_info(f"Configuration: {config}")
     
     # Test only or train + validate
     if config.get('test_only', False):
