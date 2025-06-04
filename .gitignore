@@ -201,7 +201,7 @@ wandb/
 mlruns/
 lightning_logs/
 outputs/
-experiments/
+experiments
 # Data (often large, consider if it should be versioned or not)
 # data/
 # datasets/
