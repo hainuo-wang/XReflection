@@ -349,11 +349,9 @@ def main():
         pprint(config)
     
     # Resume from checkpoint if specified
-    resume_path = config.get('resume')
-    if resume_path and trainer.is_global_zero:
+    resume_path = config['path'].get('resume_state')
+    if resume_path is not None and trainer.is_global_zero:
         print(f"Resuming from checkpoint: {resume_path}")
-    else:
-        resume_path = None
     
     # Test only or train + validate
     if config.get('test_only', False):
