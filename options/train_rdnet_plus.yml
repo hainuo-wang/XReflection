@@ -160,7 +160,6 @@ train:
     milestones: [150, 300, 450]
     gamma: 0.5
 
-  max_epochs: 500
   warmup_epochs: -1  # Warm up epochs
 
   # losses
