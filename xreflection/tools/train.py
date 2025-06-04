@@ -78,9 +78,6 @@ def process_config_overrides(config, args):
     
     if args.test_only:
         config['test_only'] = True
-        
-    if args.resume:
-        config['resume'] = args.resume
     
     # Process general overrides
     for override in args.override:
@@ -255,16 +252,20 @@ def main():
     exp_dir = os.path.join(config['path']['experiments_root'], config['name'])
     vis_dir = os.path.join(exp_dir, 'visualization')
     
+    # Resume from checkpoint if specified
+    resume_path = config['path'].get('resume_state', None)
+    if args.resume is not None:
+        resume_path = args.resume
+    
     # Create directories only on main process (rank 0)
     # Check if this is the main process using Lightning's utility
     is_main_process = L.fabric.utilities.rank_zero.rank_zero_only.rank == 0
     
     if is_main_process:
-        # Create experiment directory
-        if os.path.exists(exp_dir):
+        if os.path.exists(exp_dir) and resume_path is None:
             os.rename(f"{exp_dir}", f"{exp_dir}_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
+        # Create experiment directory
         os.makedirs(exp_dir, exist_ok=True)
-        
         # Create visualization directory
         os.makedirs(vis_dir, exist_ok=True)
     
@@ -347,11 +348,6 @@ def main():
     if trainer.is_global_zero:
         print("Configuration:")
         pprint(config)
-    
-    # Resume from checkpoint if specified
-    resume_path = config['path'].get('resume_state')
-    if resume_path is not None and trainer.is_global_zero:
-        print(f"Resuming from checkpoint: {resume_path}")
     
     # Test only or train + validate
     if config.get('test_only', False):
