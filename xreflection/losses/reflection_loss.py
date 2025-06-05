@@ -52,6 +52,7 @@ class ContainLoss(nn.Module):
         return out / pix_num
 
 
+@LOSS_REGISTRY.register()
 class MultipleLoss(nn.Module):
     def __init__(self, losses, weight=None):
         super(MultipleLoss, self).__init__()
@@ -580,6 +581,39 @@ class DINOLoss(nn.Module):
 
         return F.mse_loss(output_cls_token, target_cls_token)
 
+
+@LOSS_REGISTRY.register()
+class ExclusionLoss(nn.Module):
+    def __init__(self, level=3, eps=1e-6):
+        super().__init__()
+        self.level = level
+        self.eps = eps
+
+    def forward(self, img_T, img_R):
+        grad_x_loss = []
+        grad_y_loss = []
+
+        for l in range(self.level):
+            grad_x_T, grad_y_T = compute_gradient(img_T)
+            grad_x_R, grad_y_R = compute_gradient(img_R)
+
+            alphax = (2.0 * torch.mean(torch.abs(grad_x_T))) / (torch.mean(torch.abs(grad_x_R)) + self.eps)
+            alphay = (2.0 * torch.mean(torch.abs(grad_y_T))) / (torch.mean(torch.abs(grad_y_R)) + self.eps)
+
+            gradx1_s = (torch.sigmoid(grad_x_T) * 2) - 1  # mul 2 minus 1 is to change sigmoid into tanh
+            grady1_s = (torch.sigmoid(grad_y_T) * 2) - 1
+            gradx2_s = (torch.sigmoid(grad_x_R * alphax) * 2) - 1
+            grady2_s = (torch.sigmoid(grad_y_R * alphay) * 2) - 1
+
+            grad_x_loss.append(((torch.mean(torch.mul(gradx1_s.pow(2), gradx2_s.pow(2)))) + self.eps) ** 0.25)
+            grad_y_loss.append(((torch.mean(torch.mul(grady1_s.pow(2), grady2_s.pow(2)))) + self.eps) ** 0.25)
+
+            img_T = F.interpolate(img_T, scale_factor=0.5, mode='bilinear')
+            img_R = F.interpolate(img_R, scale_factor=0.5, mode='bilinear')
+        loss_gradxy = torch.sum(sum(grad_x_loss) / 3) + torch.sum(sum(grad_y_loss) / 3)
+
+        return loss_gradxy / 2
+    
 
 if __name__ == '__main__':
     x = torch.randn(3, 32, 224, 224).cuda()
