@@ -1,6 +1,5 @@
 # general settings
 name: train_sirs_rdnet
-is_train: true
 model_type: RDNetModel  # Use Lightning module instead of vanilla model
 num_gpu: auto  # auto: can infer from your visible devices automatically
 manual_seed: 42

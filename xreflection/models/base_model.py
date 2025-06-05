@@ -31,7 +31,6 @@ class BaseModel(L.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.opt = opt
-        self.is_train = opt['is_train']
 
         # Define network
         self.net_g = build_network(opt['network_g'])
