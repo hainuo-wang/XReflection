@@ -120,8 +120,8 @@ datasets:
 # network structures
 network_g:
   type: FullNet_NLP
-  channels: [64, 128, 256, 512]
-  layers: [2, 2, 4, 2]
+  channels: [ 64, 128, 256, 512 ]
+  layers: [ 2, 2, 4, 2 ]
   num_subnet: 4
   loss_col: 4
   num_classes: 1000
@@ -150,11 +150,11 @@ train:
     baseball_lr: !!float 2e-4  # Learning rate for baseball parameters
     other_lr: !!float 1e-4     # Learning rate for other parameters
     weight_decay: !!float 1e-4
-    betas: [0.9, 0.99]
+    betas: [ 0.9, 0.99 ]
 
   scheduler:
     type: MultiStepLR
-    milestones: [150, 300, 450]
+    milestones: [ 150, 300, 450 ]
     gamma: 0.5
 
   warmup_epochs: -1  # Warm up epochs
@@ -164,7 +164,7 @@ train:
     type: MSELoss
     loss_weight: 1.0
     reduction: mean
-    
+
   # perceptual loss (content and style losses)
   perceptual_opt:
     type: PerceptualLoss
@@ -181,7 +181,7 @@ train:
     style_weight: 0.0
     range_norm: false
     criterion: l1
-    
+
   grad_opt:
     type: GradientLoss
     loss_weight: 10
@@ -192,7 +192,7 @@ val:
   save_img_top_n: 5
 
   metrics:
-    psnr:  # metric name
+    psnr: # metric name
       type: calculate_psnr
       crop_border: 4
       test_y_channel: false

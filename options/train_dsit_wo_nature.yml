@@ -1,0 +1,209 @@
+# general settings
+name: train_sirs_dsit_wo_nature
+is_train: true
+model_type: DSITModel  # Use DSIT Lightning module
+num_gpu: auto  # auto: can infer from your visible devices automatically
+manual_seed: 2024
+
+# Command line options integrated into config
+test_only: false          # Whether to only test the model
+resume: null              # Path to resume checkpoint, null for no resume
+precision: '32-true'      # Precision for training (32-true, 16-mixed, bf16-mixed)
+accelerator: 'auto'       # Accelerator type (auto, gpu, cpu)
+val_check_interval: 1.0   # Validation check interval
+log_every_n_steps: 10     # Log every n steps (more frequent for DSIT)
+
+# Lightning specific settings
+lightning:
+  max_epochs: 60
+  gradient_clip_val: null
+  accumulate_grad_batches: 1
+  deterministic: true
+  strategy: 'ddp'  # Strategy for distributed training
+  profiler: 'simple'  # Options: null, 'simple', 'advanced' - enable profiling for performance analysis
+  num_sanity_val_steps: 2  # Number of validation steps to run before starting training
+
+# checkpoint settings
+checkpoint:
+  monitor: 'metrics/average/psnr'  # Monitor average PSNR across all validation datasets
+  mode: 'max'  # 'max' for psnr, 'min' for loss
+  save_top_k: 10
+  save_last: true
+
+# dataset and data loader settings
+datasets:
+  train:
+    name: general-dataset
+    type: FusionDataset
+    
+    fused_datasets:
+      - name: syn-dataset
+        ratio: 0.7  # 70% synthetic data as in original
+        type: DSRDataset
+        datadir: /opt/datasets/sirs/train/VOCdevkit/VOC2012/PNGImages
+        fns: /opt/datasets/sirs/train/VOC2012_224_train_png.txt
+        size: ~  # max_dataset_size, use ~ for unlimited
+        enable_transforms: True
+        transform_size: 384
+
+      - name: real-dataset
+        ratio: 0.3  # 30% real data as in original
+        type: DSRTestDataset
+        datadir: /opt/datasets/sirs/train/real
+        enable_transforms: True
+        transform_size: 384
+
+    io_backend:
+      type: disk
+
+    # data loader
+    use_shuffle: true
+    num_worker_per_gpu: 32  # High number of workers as in original
+    batch_size_per_gpu: 1   # Batch size from original batchSize
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+    prefetch_factor: 32
+
+  val_datasets:
+    - name: Real20
+      type: DSRTestDataset
+      mode: eval
+      datadir: /opt/datasets/sirs/test/real20_420
+      io_backend:
+        type: disk
+
+      # data loader for validation
+      use_shuffle: false
+      num_worker_per_gpu: 4
+      batch_size_per_gpu: 1
+
+    - name: SIR2-Objects
+      type: DSRTestDataset
+      mode: eval
+      datadir: /opt/datasets/sirs/test/SIR2/SolidObjectDataset
+      io_backend:
+        type: disk
+
+      # data loader for validation
+      use_shuffle: false
+      num_worker_per_gpu: 4
+      batch_size_per_gpu: 1
+
+    - name: SIR2-PostCard
+      type: DSRTestDataset
+      mode: eval
+      datadir: /opt/datasets/sirs/test/SIR2/PostcardDataset
+      io_backend:
+        type: disk
+
+      # data loader for validation
+      use_shuffle: false
+      num_worker_per_gpu: 4
+      batch_size_per_gpu: 1
+
+    - name: SIR2-Wild
+      type: DSRTestDataset
+      mode: eval
+      datadir: /opt/datasets/sirs/test/SIR2/WildSceneDataset
+      io_backend:
+        type: disk
+
+      # data loader for validation
+      use_shuffle: false
+      num_worker_per_gpu: 4
+      batch_size_per_gpu: 1
+
+    - name: Nature
+      type: DSRTestDataset
+      mode: eval
+      datadir: /opt/datasets/sirs/test/Nature
+      io_backend:
+        type: disk
+
+      # data loader for validation
+      use_shuffle: false
+      num_worker_per_gpu: 4
+      batch_size_per_gpu: 1
+
+# network structures
+network_g:
+  type: DSIT  # DSIT architecture
+  window_size: 12
+  enc_blk_nums: [ 12, 8, 4, 2, 2 ]
+  dec_blk_nums: [ 2, 2, 2, 2, 2 ]
+  pretrained_models:
+    swin_prior: swin_large_o365_finetune.pth
+
+# path
+path:
+  pretrain_network_g: ~
+  param_key_g: params
+  strict_load_g: True
+  resume_state: ~
+  experiments_root: experiments  # Root directory for all experiments
+  visualization: ~  # Will be set dynamically in main.py
+  models: ~  # Will be set dynamically in main.py
+  log: ~  # Will be set dynamically in main.py
+
+# training settings
+train:
+  optim_g:
+    type: Adam  # Using Adam as in original DSIT
+    lr: !!float 1e-4  # Learning rate from original setting
+    weight_decay: 0
+    betas: [ 0.9, 0.999 ]
+
+  scheduler:
+    type: MultiStepLR
+    milestones: [ 10000, 10010, 10020 ]
+    gamma: 0.5
+
+  max_epochs: 50  # From original while loop condition
+
+  # Loss weights for DSIT
+  lambda_vgg: !!float 1e-1    # Weight for VGG/perceptual loss
+  lambda_rec: !!float 2e-1    # Weight for reconstruction loss
+
+  # losses
+  pixel_opt:
+    type: MSELoss
+    loss_weight: 1.0
+    reduction: mean
+
+  # perceptual loss (VGG-based)
+  perceptual_opt:
+    type: DSITPerceptualLoss
+    loss_weight: 1.0
+
+  # DSIT specific losses
+  exclu_opt:
+    type: DSITExclusionLoss
+    loss_weight: 1.0
+
+  recons_opt:
+    type: DSITReconsLoss
+    loss_weight: 1.0
+
+# validation settings
+val:
+  save_img: True
+  save_img_top_n: 10
+  
+  metrics:
+    psnr: # metric name
+      type: calculate_psnr
+      crop_border: 4
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 4
+      test_y_channel: false
+
+# logging settings
+logger:
+  tensorboard:
+    flush_secs: 5
+    max_queue: 10
+  wandb:
+    enable: false
+    project: xreflection
