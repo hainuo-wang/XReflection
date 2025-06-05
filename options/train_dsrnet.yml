@@ -1,0 +1,228 @@
+# general settings
+name: train_sirs_dsrnet
+is_train: true
+model_type: DSRNetModel  # Use Lightning module instead of vanilla model
+num_gpu: auto  # auto: can infer from your visible devices automatically
+manual_seed: 42
+
+# Command line options integrated into config
+test_only: false          # Whether to only test the model
+resume: null                   # Path to resume checkpoint, null for no resume
+precision: 'bf16-mixed'      # Precision for training (32-true, 16-mixed, bf16-mixed)
+accelerator: 'auto'       # Accelerator type (auto, gpu, cpu)
+val_check_interval: 1.0   # Validation check interval
+log_every_n_steps: 50     # Log every n steps
+
+# Lightning specific settings
+lightning:
+  max_epochs: 500
+  gradient_clip_val: null
+  accumulate_grad_batches: 1
+  deterministic: true
+  strategy: 'ddp'  # Strategy for distributed training
+  profiler: 'simple'  # Options: null, 'simple', 'advanced' - enable profiling for performance analysis
+  num_sanity_val_steps: 2  # Number of validation steps to run before starting training
+
+# checkpoint settings
+checkpoint:
+  monitor: 'metrics/average/psnr'  # 恢复到原来的val/psnr格式
+  mode: 'max'  # 'max' for psnr, 'min' for loss
+  save_top_k: 10
+  save_last: true
+
+# dataset and data loader settings
+datasets:
+  train:
+    name: general-dataset
+    type: FusionDataset
+    size: 4000  # 对于w_nature
+
+    fused_datasets:
+      - name: real-dataset
+        ratio: 0.2
+        type: DSRTestDataset
+        datadir: /opt/datasets/sirs/train/real
+        enable_transforms: True
+
+      - name: nature-dataset
+        ratio: 0.2
+        type: DSRTestDataset
+        datadir: /opt/datasets/sirs/train/nature
+        enable_transforms: True
+
+      - name: syn-dataset
+        ratio: 0.6
+        type: DSRDataset
+        datadir: /opt/datasets/sirs/train/VOCdevkit/VOC2012/PNGImages
+        fns: /opt/datasets/sirs/train/VOC2012_224_train_png.txt
+        size: ~
+        enable_transforms: True
+    io_backend:
+      type: disk
+
+    # data loader
+    use_shuffle: true
+    num_worker_per_gpu: 4
+    batch_size_per_gpu: 1
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+
+  val_datasets:
+    - name: Real20
+      type: DSRTestDataset
+      mode: eval
+      datadir: /opt/datasets/sirs/test/real20_420
+      io_backend:
+        type: disk
+
+      # data loader for validation
+      use_shuffle: false
+      num_worker_per_gpu: 4
+      batch_size_per_gpu: 1
+
+    - name: SIR2-Objects
+      type: DSRTestDataset
+      mode: eval
+      datadir: /opt/datasets/sirs/test/SIR2/SolidObjectDataset
+      io_backend:
+        type: disk
+
+      # data loader for validation
+      use_shuffle: false
+      num_worker_per_gpu: 4
+      batch_size_per_gpu: 1
+
+    - name: SIR2-PostCard
+      type: DSRTestDataset
+      mode: eval
+      datadir: /opt/datasets/sirs/test/SIR2/PostcardDataset
+      io_backend:
+        type: disk
+
+      # data loader for validation
+      use_shuffle: false
+      num_worker_per_gpu: 4
+      batch_size_per_gpu: 1
+
+    - name: SIR2-Wild
+      type: DSRTestDataset
+      mode: eval
+      datadir: /opt/datasets/sirs/test/SIR2/WildSceneDataset
+      io_backend:
+        type: disk
+
+      # data loader for validation
+      use_shuffle: false
+      num_worker_per_gpu: 4
+      batch_size_per_gpu: 1
+
+    - name: Nature
+      type: DSRTestDataset
+      mode: eval
+      datadir: /opt/datasets/sirs/test/Nature
+      io_backend:
+        type: disk
+
+      # data loader for validation
+      use_shuffle: false
+      num_worker_per_gpu: 4
+      batch_size_per_gpu: 1
+
+# network structures
+network_g:
+  type: DSRNet
+  width: 64
+  middle_blk_num: 12
+  enc_blk_nums: [2,2,4,8]
+  dec_blk_nums: [2,2,2,2]
+  lrm_blk_nums: [2,4]
+
+# path
+path:
+  pretrain_network_g: ~
+  param_key_g: params
+  strict_load_g: true
+  resume_state: ~
+  experiments_root: experiments  # Root directory for all experiments
+  visualization: ~  # Will be set dynamically in main.py
+  models: ~  # Will be set dynamically in main.py
+  log: ~  # Will be set dynamically in main.py
+
+# training settings
+train:
+  ema_decay: -1
+  ema_update_interval: -1  # How often to update EMA model weights (in batches)
+  optim_g:
+    type: AdamW  # Using AdamW which is common in Lightning
+    baseball_lr: !!float 2e-4  # Learning rate for baseball parameters
+    other_lr: !!float 1e-4     # Learning rate for other parameters
+    weight_decay: !!float 1e-4
+    betas: [0.9, 0.99]
+
+  scheduler:
+    type: MultiStepLR
+    milestones: [150, 300, 450]
+    gamma: 0.5
+
+  max_epochs: 40
+  warmup_epochs: -1  # Warm up epochs
+
+
+  # losses
+  pixel_opt:
+    type: MultipleLoss
+#    losses: [nn.MSELoss(), GradientLoss()]
+#    weight:   [0.3, 0.6]
+
+  # reconstruction loss
+  recon_opt:
+    type: L1Loss
+    loss_weight: 0.2
+    reduction: mean
+
+  # perceptual loss (content and style losses)
+  perceptual_opt:
+    type: PerceptualLoss
+    layer_weights:
+      # before relu
+      'conv1_2': 0.3846
+      'conv2_2': 0.2083
+      'conv3_4': 0.2703
+      'conv4_4': 0.1786
+      'conv5_4': 6.6667
+    vgg_type: vgg19
+    use_input_norm: true
+    perceptual_weight: !!float 0.01
+    style_weight: 0.0
+    range_norm: false
+    criterion: l1
+
+  #  exclusion loss
+  exclusion_opt:
+    type: ExclusionLoss
+    level: 3
+    eps: !!float 0.000001
+
+# validation settings
+val:
+  save_img: True
+  save_img_top_n: 5
+
+  metrics:
+    psnr:  # metric name
+      type: calculate_psnr
+      crop_border: 4
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 4
+      test_y_channel: false
+
+# logging settings
+logger:
+  tensorboard:
+    flush_secs: 5
+    max_queue: 10
+  wandb:
+    enable: true
+    project: xreflection
