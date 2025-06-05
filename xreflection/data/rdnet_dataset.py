@@ -353,7 +353,11 @@ class FusionDataset(BaseDataset):
             datasets.append(dataset)
 
         self.datasets = datasets
-        self.size = sum([len(dataset) for dataset in datasets])
+        size = opt.get('size', None)
+        if size is not None:
+            self.size = size
+        else:
+            self.size = sum([len(dataset) for dataset in datasets])
         self.fusion_ratios = fusion_ratios
         
         print('[i] using a fusion dataset: %d %s imgs fused with ratio %s' % (

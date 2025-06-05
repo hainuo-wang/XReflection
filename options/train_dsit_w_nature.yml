@@ -182,13 +182,16 @@ train:
   # perceptual loss (VGG-based)
   perceptual_opt:
     type: DSITPerceptualLoss
+    loss_weight: 1.0
 
   # DSIT specific losses
   exclu_opt:
     type: DSITExclusionLoss
+    loss_weight: 1.0
 
   recons_opt:
     type: DSITReconsLoss
+    loss_weight: 1.0
 
 # validation settings
 val:
