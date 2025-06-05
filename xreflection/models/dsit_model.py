@@ -7,21 +7,20 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from xreflection.utils.registry import MODEL_REGISTRY
 from xreflection.models.base_model import BaseModel
 
+
 @MODEL_REGISTRY.register()
 class DSITModel(BaseModel):
     """
-    This file defines the training process of RDNet and RDNet+.
+    This file defines the training process of DSIT.
 
     Please refer to the paper for more details:
         
-        Reversible Decoupling Network for Single Image Reflection Removal (CVPR 2025).
+        DSIT: Single Image Reflection Separation via Interactive Dual-Stream Transformers (NeurIPS 2024).
 
-        Reversible Adaptor for Single Image Reflection Removal (Preprint).
-    
     """
 
     def __init__(self, opt):
-        """Initialize the ClsModel.
+        """Initialize the DSITModel.
         
         Args:
             opt (dict): Configuration options.
@@ -31,23 +30,32 @@ class DSITModel(BaseModel):
         # Losses (initialized in setup)
         self.cri_pix = None
         self.cri_perceptual = None
-        self.cri_grad = None
+        self.cri_exclu = None
+        self.cri_recons = None
 
     def setup_losses(self):
         """Setup loss functions"""
         from xreflection.losses import build_loss
+
+        # Pixel loss for transmission layer
         if not hasattr(self, 'cri_pix') or self.cri_pix is None:
             if self.opt['train'].get('pixel_opt'):
                 self.cri_pix = build_loss(self.opt['train']['pixel_opt'])
 
+        # Perceptual loss
         if not hasattr(self, 'cri_perceptual') or self.cri_perceptual is None:
             if self.opt['train'].get('perceptual_opt'):
                 self.cri_perceptual = build_loss(self.opt['train']['perceptual_opt'])
 
-        if not hasattr(self, 'cri_grad') or self.cri_grad is None:
-            if self.opt['train'].get('grad_opt'):
-                self.cri_grad = build_loss(self.opt['train']['grad_opt'])
+        # Exclusion loss
+        if not hasattr(self, 'cri_exclu') or self.cri_exclu is None:
+            if self.opt['train'].get('exclu_opt'):
+                self.cri_exclu = build_loss(self.opt['train']['exclu_opt'])
 
+        # Reconstruction loss
+        if not hasattr(self, 'cri_recons') or self.cri_recons is None:
+            if self.opt['train'].get('recons_opt'):
+                self.cri_recons = build_loss(self.opt['train']['recons_opt'])
 
     def training_step(self, batch, batch_idx):
         """Training step.
@@ -65,45 +73,42 @@ class DSITModel(BaseModel):
         target_r = batch['target_r']
 
         # Forward pass
-        x_cls_out, x_img_out = self.net_g(inp)
-        output_clean, output_reflection = x_img_out[-1][:, :3, ...], x_img_out[-1][:, 3:, ...]
+        output_t, output_r, output_rr = self.net_g(inp)
 
         # Calculate losses
         loss_dict = OrderedDict()
-        pix_t_loss_list = []
-        pix_r_loss_list = []
-        per_loss_list = []
-        grad_loss_list = []
 
-        for i, out_imgs in enumerate(x_img_out):
-            out_t, out_r = out_imgs[:, :3, ...], out_imgs[:, 3:, ...]
-            # Pixel loss
-            l_g_pix_t = self.cri_pix(out_t, target_t)
-            pix_t_loss_list.append(l_g_pix_t)
-            l_g_pix_r = self.cri_pix(out_r, target_r)
-            pix_r_loss_list.append(l_g_pix_r)
+        # Pixel losses
+        l_g_pix_t = self.cri_pix(output_t, target_t)
+        l_g_pix_r = self.cri_pix(output_r, target_r)
 
-            # Perceptual loss
-            l_g_percep_t, _ = self.cri_perceptual(out_t, target_t)
-            if l_g_percep_t is not None:
-                per_loss_list.append(l_g_percep_t)
+        # Perceptual loss
+        l_g_percep_t = self.cri_perceptual(output_t, target_t)
+        if l_g_percep_t is None:
+            l_g_percep_t = torch.tensor(0.0, device=inp.device)
 
-            # Gradient loss
-            l_g_grad = self.cri_grad(out_t, target_t)
-            grad_loss_list.append(l_g_grad)
+        # Exclusion loss
+        l_g_exclu = self.cri_exclu(output_t, output_r)
 
-        # Apply weights to losses
-        l_g_pix_t = self.calculate_weighted_loss(pix_t_loss_list)
-        l_g_pix_r = self.calculate_weighted_loss(pix_r_loss_list)
-        l_g_percep_t = self.calculate_weighted_loss(per_loss_list)
-        l_g_grad = self.calculate_weighted_loss(grad_loss_list)
+        # Reconstruction loss
+        l_g_recons = self.cri_recons(output_t, output_r, output_rr, inp)
+
+        # Apply loss weights
+        train_opt = self.opt['train']
+        lambda_vgg = train_opt.get('lambda_vgg', 1.0)
+        lambda_rec = train_opt.get('lambda_rec', 1.0)
+
+        l_g_percep_t = l_g_percep_t * lambda_vgg
+        l_g_recons = l_g_recons * lambda_rec
 
         # Total loss
         loss_dict['l_g_pix_t'] = l_g_pix_t
         loss_dict['l_g_pix_r'] = l_g_pix_r
         loss_dict['l_g_percep_t'] = l_g_percep_t
-        loss_dict['l_g_grad'] = l_g_grad
-        l_g_total = l_g_pix_t + l_g_pix_r + l_g_percep_t + l_g_grad
+        loss_dict['l_g_exclu'] = l_g_exclu
+        loss_dict['l_g_recons'] = l_g_recons
+
+        l_g_total = l_g_pix_t + l_g_pix_r + l_g_percep_t + l_g_exclu + l_g_recons
 
         # Log losses
         for name, value in loss_dict.items():
@@ -111,18 +116,44 @@ class DSITModel(BaseModel):
 
         # Store outputs for visualization
         self.last_inp = inp
-        self.last_output_clean = output_clean
-        self.last_output_reflection = output_reflection
+        self.last_output_clean = output_t
+        self.last_output_reflection = output_r
         self.last_target_t = target_t
 
         return l_g_total
 
     def testing(self, inp):
+        """Testing/inference method.
+        
+        Args:
+            inp (torch.Tensor): Input tensor.
+        """
         if self.use_ema:
             model = self.ema_model
         else:
             model = self.net_g
+
         with torch.no_grad():
-            x_cls_out, x_img_out = model(inp)
-            output_clean, output_reflection = x_img_out[-1][:, :3, ...], x_img_out[-1][:, 3:, ...]
-            self.output = [output_clean, output_reflection]
+            output_t, output_r, output_rr = model(inp)
+            self.output = [output_t, output_r]
+
+    def configure_optimizer_params(self):
+        """Configure optimizer parameters.
+        
+        Returns:
+            dict: Optimizer configuration.
+        """
+        train_opt = self.opt['train']
+
+        # Get all network parameters
+        params = list(self.net_g.parameters())
+
+        # Get optimizer configuration
+        optim_type = train_opt['optim_g']['type']
+        optim_config = {k: v for k, v in train_opt['optim_g'].items() if k != 'type'}
+
+        return {
+            'optim_type': optim_type,
+            'params': params,
+            **optim_config,
+        }
