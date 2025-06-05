@@ -7,7 +7,6 @@ manual_seed: 42
 
 # Command line options integrated into config
 test_only: false          # Whether to only test the model
-resume: null              # Path to resume checkpoint, null for no resume
 precision: '32-true'      # Precision for training (32-true, 16-mixed, bf16-mixed)
 accelerator: 'auto'       # Accelerator type (auto, gpu, cpu)
 val_check_interval: 1.0   # Validation check interval
@@ -141,7 +140,6 @@ path:
   resume_state: ~
   experiments_root: experiments  # Root directory for all experiments
   visualization: ~  # Will be set dynamically in main.py
-  models: ~  # Will be set dynamically in main.py
   log: ~  # Will be set dynamically in main.py
 
 # training settings
@@ -160,7 +158,6 @@ train:
     milestones: [ 150, 300, 450 ]
     gamma: 0.5
 
-  max_epochs: 500
   warmup_epochs: -1  # Warm up epochs
 
   # losses
