@@ -45,7 +45,7 @@ Make sure you have the following system dependencies installed:
 ### Installation Commands
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/XReflection.git
+git clone https://github.com/hainuo-wang/XReflection.git
 cd XReflection
 
 # Install dependencies
@@ -73,7 +73,7 @@ python tools/train.py --config configs/train_config.yaml
 * 7,643 images from the
   [Pascal VOC dataset](http://host.robots.ox.ac.uk/pascal/VOC/), center-cropped as 224 x 224 slices to synthesize training pairs;
 * 90 real-world training pairs provided by [Zhang *et al.*](https://github.com/ceciliavision/perceptual-reflection-removal);
-* 200 real-world training pairs provided by [IBCLN](https://github.com/JHL-HUST/IBCLN) (In our training setting 2, &dagger; labeled in our paper).
+* 200 real-world training pairs provided by [IBCLN](https://github.com/JHL-HUST/IBCLN).
 
 #### Testing dataset
 * 45 real-world testing images from [CEILNet dataset](https://github.com/fqnchina/CEILNet);
