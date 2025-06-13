@@ -10,7 +10,7 @@ test_only: false          # Whether to only test the model
 resume: null              # Path to resume checkpoint, null for no resume
 precision: '32-true'      # Precision for training (32-true, 16-mixed, bf16-mixed)
 accelerator: 'auto'       # Accelerator type (auto, gpu, cpu)
-val_check_interval: 1.0   # Validation check interval
+val_check_interval: 0.25   # Validation check interval
 log_every_n_steps: 10     # Log every n steps (more frequent for DSIT)
 
 # Lightning specific settings
@@ -27,7 +27,7 @@ lightning:
 checkpoint:
   monitor: 'metrics/average/psnr'  # Monitor average PSNR across all validation datasets
   mode: 'max'  # 'max' for psnr, 'min' for loss
-  save_top_k: 10
+  save_top_k: 3
   save_last: true
 
 # dataset and data loader settings
@@ -167,8 +167,6 @@ train:
     milestones: [ 10000, 10010, 10020 ]
     gamma: 0.5
 
-  max_epochs: 50  # From original while loop condition
-
   # Loss weights for DSIT
   lambda_vgg: !!float 1e-1    # Weight for VGG/perceptual loss
   lambda_rec: !!float 2e-1    # Weight for reconstruction loss
@@ -182,21 +180,21 @@ train:
   # perceptual loss (VGG-based)
   perceptual_opt:
     type: DSITPerceptualLoss
-    loss_weight: 1.0
+    # loss_weight: 1.0
 
   # DSIT specific losses
   exclu_opt:
     type: DSITExclusionLoss
-    loss_weight: 1.0
+    # loss_weight: 1.0
 
   recons_opt:
     type: DSITReconsLoss
-    loss_weight: 1.0
+    # loss_weight: 1.0
 
 # validation settings
 val:
   save_img: True
-  save_img_top_n: 10
+  save_img_top_n: 1
   
   metrics:
     psnr: # metric name

@@ -8,14 +8,14 @@ manual_seed: 42
 # Command line options integrated into config
 test_only: false          # Whether to only test the model
 resume: null                   # Path to resume checkpoint, null for no resume
-precision: 'bf16-mixed'      # Precision for training (32-true, 16-mixed, bf16-mixed)
+precision: '32-true'      # Precision for training (32-true, 16-mixed, bf16-mixed)
 accelerator: 'auto'       # Accelerator type (auto, gpu, cpu)
-val_check_interval: 1.0   # Validation check interval
-log_every_n_steps: 50     # Log every n steps
+val_check_interval: 0.25   # Validation check interval
+log_every_n_steps: 10     # Log every n steps
 
 # Lightning specific settings
 lightning:
-  max_epochs: 500
+  max_epochs: 60
   gradient_clip_val: null
   accumulate_grad_batches: 1
   deterministic: true
@@ -27,7 +27,7 @@ lightning:
 checkpoint:
   monitor: 'metrics/average/psnr'  # 恢复到原来的val/psnr格式
   mode: 'max'  # 'max' for psnr, 'min' for loss
-  save_top_k: 10
+  save_top_k: 3
   save_last: true
 
 # dataset and data loader settings
@@ -43,12 +43,14 @@ datasets:
         type: DSRTestDataset
         datadir: /opt/datasets/sirs/train/real
         enable_transforms: True
+        transform_size: 224
 
       - name: nature-dataset
         ratio: 0.2
         type: DSRTestDataset
         datadir: /opt/datasets/sirs/train/nature
         enable_transforms: True
+        transform_size: 224
 
       - name: syn-dataset
         ratio: 0.6
@@ -57,6 +59,8 @@ datasets:
         fns: /opt/datasets/sirs/train/VOC2012_224_train_png.txt
         size: ~
         enable_transforms: True
+        transform_size: 224
+
     io_backend:
       type: disk
 
@@ -145,13 +149,10 @@ path:
   resume_state: ~
   experiments_root: experiments  # Root directory for all experiments
   visualization: ~  # Will be set dynamically in main.py
-  models: ~  # Will be set dynamically in main.py
   log: ~  # Will be set dynamically in main.py
 
 # training settings
 train:
-  ema_decay: -1
-  ema_update_interval: -1  # How often to update EMA model weights (in batches)
   optim_g:
     type: AdamW  # Using AdamW which is common in Lightning
     baseball_lr: !!float 2e-4  # Learning rate for baseball parameters
@@ -164,15 +165,14 @@ train:
     milestones: [150, 300, 450]
     gamma: 0.5
 
-  max_epochs: 40
   warmup_epochs: -1  # Warm up epochs
 
 
   # losses
   pixel_opt:
     type: MultipleLoss
-#    losses: [nn.MSELoss(), GradientLoss()]
-#    weight:   [0.3, 0.6]
+    # losses: [nn.MSELoss(), GradientLoss()]
+    weight: [0.3, 0.6]
 
   # reconstruction loss
   recon_opt:
@@ -206,7 +206,7 @@ train:
 # validation settings
 val:
   save_img: True
-  save_img_top_n: 5
+  save_img_top_n: 1
 
   metrics:
     psnr:  # metric name
@@ -224,5 +224,5 @@ logger:
     flush_secs: 5
     max_queue: 10
   wandb:
-    enable: true
+    enable: false
     project: xreflection

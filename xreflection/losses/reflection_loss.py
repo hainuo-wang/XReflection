@@ -54,9 +54,9 @@ class ContainLoss(nn.Module):
 
 @LOSS_REGISTRY.register()
 class MultipleLoss(nn.Module):
-    def __init__(self, losses, weight=None):
+    def __init__(self, weight=None):
         super(MultipleLoss, self).__init__()
-        self.losses = nn.ModuleList(losses)
+        self.losses = nn.ModuleList([nn.MSELoss(), GradientLoss()])
         self.weight = weight or [1 / len(self.losses)] * len(self.losses)
 
     def forward(self, predict, target):
