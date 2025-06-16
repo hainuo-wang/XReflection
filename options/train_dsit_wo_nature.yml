@@ -167,7 +167,7 @@ train:
   # perceptual loss (VGG-based)
   perceptual_opt:
     type: DSITPerceptualLoss
-    loss_weight: !!float 1e-1
+    loss_weight: !!float 1e-2
 
   # DSIT specific losses
   exclu_opt:
