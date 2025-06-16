@@ -35,7 +35,8 @@ datasets:
   train:
     name: general-dataset
     type: DSITFusionDataset
-    
+    size: 5000
+
     fused_datasets:
       - name: syn-dataset
         ratio: 0.6  # 60% synthetic data as in original
@@ -59,8 +60,6 @@ datasets:
         datadir: /opt/datasets/sirs/train/nature
         enable_transforms: True
         transform_size: 384
-
-    size: 5000
 
     io_backend:
       type: disk
