@@ -150,7 +150,6 @@ path:
   resume_state: ~
   experiments_root: experiments  # Root directory for all experiments
   visualization: ~  # Will be set dynamically in main.py
-  models: ~  # Will be set dynamically in main.py
   log: ~  # Will be set dynamically in main.py
 
 # training settings
