@@ -155,8 +155,6 @@ path:
 
 # training settings
 train:
-  ema_decay: -1
-  ema_update_interval: -1  # How often to update EMA model weights (in batches)
   optim_g:
     type: AdamW  # Using AdamW which is common in Lightning
     baseball_lr: !!float 2e-4  # Learning rate for baseball parameters
@@ -168,8 +166,6 @@ train:
     type: MultiStepLR
     milestones: [150, 300, 450]
     gamma: 0.5
-
-  warmup_epochs: -1  # Warm up epochs
 
   # losses
   pixel_opt:

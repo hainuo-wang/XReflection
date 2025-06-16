@@ -191,46 +191,6 @@ def create_callbacks(config):
     lr_monitor = LearningRateMonitor(logging_interval='epoch')
     callbacks.append(lr_monitor)
     
-    # LR Warmup Callback (if enabled)
-    warmup_epochs = config.get('train', {}).get('warmup_epochs', 0)
-    if warmup_epochs > 0:
-        warmup_callback = LRWarmupCallback(
-            warmup_epochs=warmup_epochs,
-            initial_lr_factor=0.1,  # Start with 10% of the target learning rate
-            verbose=True
-        )
-        callbacks.append(warmup_callback)
-        print(f"Learning Rate Warmup enabled for {warmup_epochs} epochs")
-    
-    # EMA Callback (if enabled)
-    ema_decay = config.get('train', {}).get('ema_decay', 0)
-    if ema_decay > 0:
-        ema_update_interval = config.get('train', {}).get('ema_update_interval', 1)
-        ema_callback = EMACallback(
-            decay=ema_decay,
-            update_interval=ema_update_interval
-        )
-        callbacks.append(ema_callback)
-        print(f"EMA enabled with decay factor: {ema_decay}, update interval: {ema_update_interval}")
-    
-    # Early stopping (optional)
-    if config.get('early_stopping', False):
-        early_stop_config = config['early_stopping']
-        # Use the same monitor and mode as checkpoint by default
-        early_stop_monitor = early_stop_config.get('monitor', monitor)
-        early_stop_mode = early_stop_config.get('mode', mode)
-        
-        early_stop = EarlyStopping(
-            monitor=early_stop_monitor,
-            patience=early_stop_config.get('patience', 10),
-            mode=early_stop_mode,
-            min_delta=early_stop_config.get('min_delta', 0.01),
-            verbose=True
-        )
-        callbacks.append(early_stop)
-        print(f"Early stopping enabled: monitoring {early_stop_monitor}, mode {early_stop_mode}, "
-              f"patience {early_stop_config.get('patience', 10)}")
-        
     return callbacks
 
 

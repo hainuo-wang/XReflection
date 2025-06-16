@@ -165,9 +165,6 @@ train:
     milestones: [150, 300, 450]
     gamma: 0.5
 
-  warmup_epochs: -1  # Warm up epochs
-
-
   # losses
   pixel_opt:
     type: MultipleLoss

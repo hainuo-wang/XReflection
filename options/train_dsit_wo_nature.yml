@@ -158,8 +158,6 @@ train:
     milestones: [ 10000, 10010, 10020 ]
     gamma: 0.5
 
-  max_epochs: 50  # From original while loop condition
-
   # Loss weights for DSIT
   lambda_vgg: !!float 1e-1    # Weight for VGG/perceptual loss
   lambda_rec: !!float 2e-1    # Weight for reconstruction loss
