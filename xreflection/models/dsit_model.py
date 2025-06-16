@@ -93,14 +93,6 @@ class DSITModel(BaseModel):
         # Reconstruction loss
         l_g_recons = self.cri_recons(output_t, output_r, output_rr, inp)
 
-        # Apply loss weights
-        train_opt = self.opt['train']
-        lambda_vgg = train_opt.get('lambda_vgg', 1.0)
-        lambda_rec = train_opt.get('lambda_rec', 1.0)
-
-        l_g_percep_t = l_g_percep_t * lambda_vgg
-        l_g_recons = l_g_recons * lambda_rec
-
         # Total loss
         loss_dict['l_g_pix_t'] = l_g_pix_t
         loss_dict['l_g_pix_r'] = l_g_pix_r

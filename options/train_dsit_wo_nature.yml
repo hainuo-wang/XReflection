@@ -158,10 +158,6 @@ train:
     milestones: [ 10000, 10010, 10020 ]
     gamma: 0.5
 
-  # Loss weights for DSIT
-  lambda_vgg: !!float 1e-1    # Weight for VGG/perceptual loss
-  lambda_rec: !!float 2e-1    # Weight for reconstruction loss
-
   # losses
   pixel_opt:
     type: MSELoss
@@ -171,7 +167,7 @@ train:
   # perceptual loss (VGG-based)
   perceptual_opt:
     type: DSITPerceptualLoss
-    loss_weight: 1.0
+    loss_weight: !!float 1e-1
 
   # DSIT specific losses
   exclu_opt:
@@ -180,7 +176,7 @@ train:
 
   recons_opt:
     type: DSITReconsLoss
-    loss_weight: 1.0
+    loss_weight: !!float 2e-1
 
 # validation settings
 val:

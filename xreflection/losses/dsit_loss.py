@@ -39,10 +39,11 @@ class DSITExclusionLoss(nn.Module):
     by minimizing their correlation.
     """
 
-    def __init__(self, level=3, eps=1e-6):
+    def __init__(self, level=3, eps=1e-6, loss_weight=1.0):
         super(DSITExclusionLoss, self).__init__()
         self.level = level
-        self.eps = eps
+        self.eps = eps 
+        self.loss_weight = loss_weight
 
     def forward(self, pred_t, pred_r):
         """Forward function.
@@ -76,7 +77,7 @@ class DSITExclusionLoss(nn.Module):
             pred_r = F.interpolate(pred_r, scale_factor=0.5, mode='bilinear')
         loss_gradxy = torch.sum(sum(grad_x_loss) / 3) + torch.sum(sum(grad_y_loss) / 3)
 
-        return loss_gradxy / 2
+        return loss_gradxy / 2 * self.loss_weight
 
 
 @LOSS_REGISTRY.register()
@@ -87,9 +88,10 @@ class DSITReconsLoss(nn.Module):
     reconstructs the input image.
     """
 
-    def __init__(self, ):
+    def __init__(self, loss_weight=1.0):
         super(DSITReconsLoss, self).__init__()
         self.criterion = nn.L1Loss()
+        self.loss_weight = loss_weight
 
     def forward(self, pred_t, pred_r, recons, input_img):
         """Forward function.
@@ -104,12 +106,12 @@ class DSITReconsLoss(nn.Module):
             Tensor: Reconstruction loss value.
         """
         content_diff = self.criterion(pred_t + pred_r + recons, input_img)
-        return content_diff
+        return content_diff * self.loss_weight
 
 
 @LOSS_REGISTRY.register()
 class DSITPerceptualLoss(nn.Module):
-    def __init__(self, vgg=None, weights=None, indices=None, normalize=True):
+    def __init__(self, vgg=None, weights=None, indices=None, normalize=True, loss_weight=1.0):
         super(DSITPerceptualLoss, self).__init__()
         if vgg is None:
             self.vgg = Vgg19().cuda()
@@ -122,7 +124,8 @@ class DSITPerceptualLoss(nn.Module):
             self.normalize = MeanShift([0.485, 0.456, 0.406], [0.229, 0.224, 0.225], norm=True).cuda()
         else:
             self.normalize = None
-
+        self.loss_weight = loss_weight
+        
     def forward(self, x, y):
         if self.normalize is not None:
             x = self.normalize(x)
@@ -132,4 +135,4 @@ class DSITPerceptualLoss(nn.Module):
         for i in range(len(x_vgg)):
             loss += self.weights[i] * self.criterion(x_vgg[i], y_vgg[i].detach())
 
-        return loss
+        return loss * self.loss_weight
