@@ -57,8 +57,8 @@ class BaseModel(L.LightningModule):
         if load_path is not None:
             self.load_weights(load_path)
 
-        if stage == 'fit' or stage is None:
-            self.setup_losses()
+        # if stage == 'fit' or stage is None:
+        self.setup_losses()
 
     def load_weights(self, load_path):
         """Load pretrained weights.

@@ -158,6 +158,7 @@ def create_datamodule(config):
             test_loaders = []
             for test_idx, test_dataset in enumerate(self.test_datasets):
                 test_config = self.config['datasets']['val_datasets'][test_idx]
+                test_config['phase'] = 'test'
                 test_loaders.append(build_dataloader(test_dataset, test_config))
             
             return test_loaders
