@@ -57,7 +57,7 @@ python setup.py develop
 
 ## 📦 Getting Started
 
-### Testing with Pretrained Models
+### Testing a Pretrained Model
 ```python
 python tools/train.py --config configs/train_config.yaml --resume pretrained.ckpt --test_only
 ```
