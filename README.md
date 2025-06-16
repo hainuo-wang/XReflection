@@ -57,10 +57,9 @@ python setup.py develop
 
 ## 📦 Getting Started
 
-### Inference with Pretrained Models
-Run reflection removal on an image:
+### Testing with Pretrained Models
 ```python
-TODO
+python tools/train.py --config configs/train_config.yaml --resume pretrained.ckpt --test_only
 ```
 
 ### Training a Model
