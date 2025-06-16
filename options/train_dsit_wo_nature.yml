@@ -34,7 +34,7 @@ checkpoint:
 datasets:
   train:
     name: general-dataset
-    type: FusionDataset
+    type: DSITFusionDataset
     
     fused_datasets:
       - name: syn-dataset
