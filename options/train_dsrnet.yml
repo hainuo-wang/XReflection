@@ -34,7 +34,7 @@ checkpoint:
 datasets:
   train:
     name: general-dataset
-    type: FusionDataset
+    type: DSRFusionDataset
     size: 4000  # 对于w_nature
 
     fused_datasets:
