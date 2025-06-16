@@ -168,7 +168,7 @@ train:
   # losses
   pixel_opt:
     type: MultipleLoss
-    # losses: [nn.MSELoss(), GradientLoss()]
+    losses: [nn.MSELoss(), GradientLoss()]
     weight: [0.3, 0.6]
 
   # reconstruction loss
@@ -199,6 +199,7 @@ train:
     type: ExclusionLoss
     level: 3
     eps: !!float 0.000001
+    loss_weight: !!float 1.0
 
 # validation settings
 val:

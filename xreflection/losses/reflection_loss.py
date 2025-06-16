@@ -54,9 +54,16 @@ class ContainLoss(nn.Module):
 
 @LOSS_REGISTRY.register()
 class MultipleLoss(nn.Module):
-    def __init__(self, weight=None):
+    def __init__(self, weight=None, losses=None):
         super(MultipleLoss, self).__init__()
-        self.losses = nn.ModuleList([nn.MSELoss(), GradientLoss()])
+        parsed_losses = []
+        for loss in losses:
+            try:
+                parsed_losses.append(eval(loss))
+            except:
+                raise ValueError(f"Failed to parse loss function: {loss}")
+        
+        self.losses = nn.ModuleList(parsed_losses) if parsed_losses else nn.ModuleList(nn.MSELoss(), GradientLoss())
         self.weight = weight or [1 / len(self.losses)] * len(self.losses)
 
     def forward(self, predict, target):
@@ -584,10 +591,11 @@ class DINOLoss(nn.Module):
 
 @LOSS_REGISTRY.register()
 class ExclusionLoss(nn.Module):
-    def __init__(self, level=3, eps=1e-6):
+    def __init__(self, level=3, eps=1e-6, loss_weight=1.0):
         super().__init__()
         self.level = level
         self.eps = eps
+        self.loss_weight = loss_weight
 
     def forward(self, img_T, img_R):
         grad_x_loss = []
@@ -612,7 +620,7 @@ class ExclusionLoss(nn.Module):
             img_R = F.interpolate(img_R, scale_factor=0.5, mode='bilinear')
         loss_gradxy = torch.sum(sum(grad_x_loss) / 3) + torch.sum(sum(grad_y_loss) / 3)
 
-        return loss_gradxy / 2
+        return loss_gradxy / 2 * self.loss_weight
     
 
 if __name__ == '__main__':
