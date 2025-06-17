@@ -10,7 +10,7 @@ test_only: false          # Whether to only test the model
 resume: null              # Path to resume checkpoint, null for no resume
 precision: '32-true'      # Precision for training (32-true, 16-mixed, bf16-mixed)
 accelerator: 'auto'       # Accelerator type (auto, gpu, cpu)
-val_check_interval: 1.0   # Validation check interval
+val_check_interval: 0.25   # Validation check interval
 log_every_n_steps: 10     # Log every n steps (more frequent for DSIT)
 
 # Lightning specific settings
@@ -27,7 +27,7 @@ lightning:
 checkpoint:
   monitor: 'metrics/average/psnr'  # Monitor average PSNR across all validation datasets
   mode: 'max'  # 'max' for psnr, 'min' for loss
-  save_top_k: 10
+  save_top_k: 3
   save_last: true
 
 # dataset and data loader settings
@@ -113,18 +113,6 @@ datasets:
       num_worker_per_gpu: 4
       batch_size_per_gpu: 1
 
-    - name: Nature
-      type: DSRTestDataset
-      mode: eval
-      datadir: /opt/datasets/sirs/test/Nature
-      io_backend:
-        type: disk
-
-      # data loader for validation
-      use_shuffle: false
-      num_worker_per_gpu: 4
-      batch_size_per_gpu: 1
-
 # network structures
 network_g:
   type: DSIT  # DSIT architecture
@@ -180,7 +168,7 @@ train:
 # validation settings
 val:
   save_img: True
-  save_img_top_n: 10
+  save_img_top_n: 1
   
   metrics:
     psnr: # metric name
