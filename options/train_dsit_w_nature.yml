@@ -66,7 +66,7 @@ datasets:
 
     # data loader
     use_shuffle: true
-    num_worker_per_gpu: 32  # High number of workers as in original
+    num_worker_per_gpu: 8  # High number of workers as in original
     batch_size_per_gpu: 1   # Batch size from original batchSize
     dataset_enlarge_ratio: 1
     prefetch_mode: ~
