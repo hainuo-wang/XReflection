@@ -2,7 +2,6 @@ import lightning as L
 import torch
 import os
 import re
-import warnings
 from os import path as osp
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -11,17 +10,6 @@ from xreflection.metrics import calculate_metric
 from xreflection.utils import imwrite, tensor2img
 from lightning.pytorch.utilities import rank_zero_only, rank_zero_info, rank_zero_warn
 from torchmetrics import Metric, MetricCollection
-
-
-# Suppress the specific UserWarning from PyTorch Lightning regarding `sync_dist`.
-# In this module, `sync_dist=False` is used correctly because metrics are
-# manually synchronized with `.compute()` before being logged, making the warning a false positive.
-warnings.filterwarnings(
-    "ignore",
-    message="It is recommended to use `self.log",
-    category=UserWarning,
-    module="lightning.pytorch.trainer.connectors.logger_connector.result"
-)
 
 
 class XMetricWrapper(Metric):
@@ -335,42 +323,42 @@ class BaseModel(L.LightningModule):
         final_avg_metrics = self.total_val_metrics.compute() if self.total_val_metrics is not None else {}
 
         # --- CORRECT: Only rank 0 performs printing and other logic ---
-        if self.trainer.is_global_zero:
-            # Log per-dataset results
-            for dataset_name, final_metrics in all_final_metrics.items():
-                log_str = f'\n Validation [{dataset_name}] Epoch {self.current_epoch}\n'
-                for name, value in final_metrics.items():
-                    log_str += f'\t # {name}: {value.item():.4f}'
-                    # Log the final, computed value. sync_dist=True is safe and handles potential warnings.
-                    self.log(f'metrics/{dataset_name}/{name}', value, sync_dist=False)
-                self.print(log_str)
+        # if self.trainer.is_global_zero:
+        # Log per-dataset results
+        for dataset_name, final_metrics in all_final_metrics.items():
+            log_str = f'\n Validation [{dataset_name}] Epoch {self.current_epoch}\n'
+            for name, value in final_metrics.items():
+                log_str += f'\t # {name}: {value.item():.4f}'
+                # Log the final, computed value. sync_dist=True is safe and handles potential warnings.
+                self.log(f'metrics/{dataset_name}/{name}', value, sync_dist=True)
+            rank_zero_info(log_str)
 
-            # Log the grand average
-            if final_avg_metrics:
-                log_str = f'\n Validation Epoch {self.current_epoch} Average Metrics:\n'
-                for name, value in final_avg_metrics.items():
-                    self.log(f'metrics/average/{name}', value, sync_dist=False)
-                    log_str += f'\t # {name}: {value.item():.4f}'
-                self.print(log_str)
+        # Log the grand average
+        if final_avg_metrics:
+            log_str = f'\n Validation Epoch {self.current_epoch} Average Metrics:\n'
+            for name, value in final_avg_metrics.items():
+                self.log(f'metrics/average/{name}', value, sync_dist=True)
+                log_str += f'\t # {name}: {value.item():.4f}'
+            rank_zero_info(log_str)
 
-            # Convert to plain dict for downstream logic. Important to do this on rank 0 only.
-            plain_avg_metrics = {k: v.item() for k, v in final_avg_metrics.items()}
+        # Convert to plain dict for downstream logic. Important to do this on rank 0 only.
+        plain_avg_metrics = {k: v.item() for k, v in final_avg_metrics.items()}
 
-            # 3. Handle top epochs logic based on the grand average
-            if 'psnr' in plain_avg_metrics:
-                self.top_psnr_epochs.append((plain_avg_metrics['psnr'], self.current_epoch))
-                self.top_psnr_epochs.sort(key=lambda x: (x[0], x[1]), reverse=True)
-                self.top_psnr_epochs = self.top_psnr_epochs[:self.opt['val'].get('save_img_top_n', 5)]
-                self.print(f'\t # The Best Average PSNR: {self.top_psnr_epochs[0][0]:.4f} at Epoch {self.top_psnr_epochs[0][1]}')
-            
-            if 'ssim' in plain_avg_metrics:
-                self.top_ssim_epochs.append((plain_avg_metrics['ssim'], self.current_epoch))
-                self.top_ssim_epochs.sort(key=lambda x: (x[0], x[1]), reverse=True)
-                self.top_ssim_epochs = self.top_ssim_epochs[:1]
-                self.print(f'\t # The Best Average SSIM: {self.top_ssim_epochs[0][0]:.4f} at Epoch {self.top_ssim_epochs[0][1]}\n')
+        # 3. Handle top epochs logic based on the grand average
+        if 'psnr' in plain_avg_metrics:
+            self.top_psnr_epochs.append((plain_avg_metrics['psnr'], self.current_epoch))
+            self.top_psnr_epochs.sort(key=lambda x: (x[0], x[1]), reverse=True)
+            self.top_psnr_epochs = self.top_psnr_epochs[:self.opt['val'].get('save_img_top_n', 5)]
+            rank_zero_info(f'\t # The Best Average PSNR: {self.top_psnr_epochs[0][0]:.4f} at Epoch {self.top_psnr_epochs[0][1]}')
+        
+        if 'ssim' in plain_avg_metrics:
+            self.top_ssim_epochs.append((plain_avg_metrics['ssim'], self.current_epoch))
+            self.top_ssim_epochs.sort(key=lambda x: (x[0], x[1]), reverse=True)
+            self.top_ssim_epochs = self.top_ssim_epochs[:1]
+            rank_zero_info(f'\t # The Best Average SSIM: {self.top_ssim_epochs[0][0]:.4f} at Epoch {self.top_ssim_epochs[0][1]}\n')
 
-            # 4. Clean up old images
-            self._delete_images_not_in_top_psnr()
+        # 4. Clean up old images
+        self._delete_images_not_in_top_psnr()
 
         # --- CORRECT: All processes must reset the state ---
         for metrics_collection in self.val_metrics.values():
