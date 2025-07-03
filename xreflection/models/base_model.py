@@ -504,4 +504,5 @@ class BaseModel(L.LightningModule):
                         os.remove(file_path)
                         # rank_zero_info(f"Deleted old image not in top PSNR epochs: {file_path}") # Optional: for verbose logging
                     except Exception as e:
+                        # rank_zero_warn(f"Error deleting image {file_path}: {str(e)}")
                         pass
