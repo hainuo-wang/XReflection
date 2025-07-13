@@ -40,8 +40,8 @@ class XMetricWrapper(Metric):
             target (torch.Tensor): The ground truth clean image tensor.
         """
         # Convert tensors to numpy images, as expected by the original calculate_metric
-        pred_img = tensor2img([preds])
-        target_img = tensor2img([target])
+        pred_img = tensor2img(preds)
+        target_img = tensor2img(target)
 
         metric_data = {'img': pred_img, 'img2': target_img}
         
@@ -272,8 +272,8 @@ class BaseModel(L.LightningModule):
             rank_zero_warn(f"'inp_path' key missing in batch, using fallback name: {img_name}")
 
         # 处理图像用于指标计算和可视化
-        clean_img = tensor2img([output_clean])
-        reflection_img = tensor2img([output_reflection])
+        clean_img = tensor2img(output_clean)
+        reflection_img = tensor2img(output_reflection)
         
         # 保存验证图像
         if self.opt['val'].get('save_img', False):
