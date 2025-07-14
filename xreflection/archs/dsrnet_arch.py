@@ -291,28 +291,3 @@ class DSRNet(nn.Module):
 
         return x, y, rr
 
-    def get_optimizer_params(self):
-        # Setup different parameter groups with their learning rates
-        train_opt = self.opt['train']
-        params_lr = [
-            {'params': self.net_g.get_baseball_params(), 'lr': train_opt['optim_g']['baseball_lr']},
-            {'params': self.net_g.get_other_params(), 'lr': train_opt['optim_g']['other_lr']},
-        ]
-
-        # Get optimizer configuration without modifying original config
-        optim_type = train_opt['optim_g']['type']
-        optim_config = {k: v for k, v in train_opt['optim_g'].items()
-                        if k not in ['type', 'baseball_lr', 'other_lr']}
-
-        return {
-            'params': params_lr,
-            'type': optim_type,
-            **optim_config
-        }
-
-    def get_baseball_params(self):
-        return self.intro.parameters()
-
-    def get_other_params(self):
-        return list(self.encoders.parameters()) + list(self.middle_blks.parameters()) \
-            + list(self.decoders.parameters()) + list(self.ending.parameters()) + list(self.lrm.parameters())

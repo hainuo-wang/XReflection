@@ -100,44 +100,24 @@ class DSRNetModel(BaseModel):
 
     def configure_optimizer_params(self):
         """Configure optimizer parameters.
-
+        
         Returns:
-            list: List of parameter groups.
+            dict: Optimizer configuration.
         """
         train_opt = self.opt['train']
 
-        # Setup different parameter groups with their learning rates
-        params_lr = [
-            {'params': self.net_g.get_baseball_params(), 'lr': train_opt['optim_g']['baseball_lr']},
-            {'params': self.net_g.get_other_params(), 'lr': train_opt['optim_g']['other_lr']},
-        ]
+        # Get all network parameters
+        params = list(self.net_g.parameters())
 
-        # Get optimizer configuration without modifying original config
+        # Get optimizer configuration
         optim_type = train_opt['optim_g']['type']
-        optim_config = {k: v for k, v in train_opt['optim_g'].items()
-                        if k not in ['type', 'baseball_lr', 'other_lr']}
+        optim_config = {k: v for k, v in train_opt['optim_g'].items() if k != 'type'}
 
         return {
             'optim_type': optim_type,
-            'params': params_lr,
+            'params': params,
             **optim_config,
         }
-
-    def calculate_weighted_loss(self, loss_list):
-        """Calculate weighted loss.
-        This file gives a default implementation of calculating multi-scale weighted loss.
-        Users can implement their own weighted loss function in the model file.
-
-        Args:
-            loss_list (list): List of losses at different scales.
-        """
-
-        weights = [i / len(loss_list) for i in range(1, len(loss_list) + 1)]
-
-        while len(weights) < len(loss_list):
-            weights.append(1.0)
-        weights = weights[:len(loss_list)]
-        return sum(w * loss for w, loss in zip(weights, loss_list))
 
     def testing(self, inp):
         if self.use_ema:

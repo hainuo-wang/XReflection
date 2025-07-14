@@ -154,11 +154,10 @@ path:
 # training settings
 train:
   optim_g:
-    type: AdamW  # Using AdamW which is common in Lightning
-    baseball_lr: !!float 2e-4  # Learning rate for baseball parameters
-    other_lr: !!float 1e-4     # Learning rate for other parameters
-    weight_decay: !!float 1e-4
-    betas: [0.9, 0.99]
+    type: Adam  # Using Adam as in original DSIT
+    lr: !!float 1e-4  # Learning rate from original setting
+    weight_decay: 0
+    betas: [ 0.9, 0.999 ]
 
   scheduler:
     type: MultiStepLR
