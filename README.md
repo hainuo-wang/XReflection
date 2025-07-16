@@ -15,7 +15,7 @@ XReflection is a neat toolbox tailored for single-image reflection removal(SIRR)
 ---
 ## 📰 News and Updates
 
-- **[Upcoming]** More models are on the way!
+- **[2025-07-16]** DSRNet is available in the model zoo. More models are on the way!
 - **[2025-05-26]** Release a training/testing pipeline. 
 
 ---
@@ -35,16 +35,10 @@ Please visit the [documentation](https://xreflection.readthedocs.io/en/latest/) 
 
 ## 🚀 Installation
 
-### Requirements
-Make sure you have the following system dependencies installed:
-- Python >= 3.10
-- PyTorch >= 2.5
-- PyTorchLightning >= 2.5
-- CUDA >= 12.1 (for GPU support)
 
 ### Installation Commands
 ```bash
-# Clone the repository
+# Build from source
 git clone https://github.com/hainuo-wang/XReflection.git
 cd XReflection
 
