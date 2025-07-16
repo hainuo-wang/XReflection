@@ -380,7 +380,19 @@ class BaseModel(L.LightningModule):
     
     def on_test_epoch_start(self):
         """Operations at the start of test epoch."""
-        self.on_validation_epoch_start()
+        # This hook's sole responsibility is to
+        # map dataloader indices to their names for use in validation_step.
+        if hasattr(self, 'trainer') and hasattr(self.trainer, 'test_dataloaders'):
+            dataloaders = self.trainer.test_dataloaders
+            if not isinstance(dataloaders, list):
+                dataloaders = [dataloaders]
+            for idx, loader in enumerate(dataloaders):
+                # This assumes the dataset name in the dataloader opt matches the config.
+                if hasattr(loader.dataset, 'opt') and 'name' in loader.dataset.opt:
+                    self.val_dataset_names[idx] = loader.dataset.opt['name']
+                else: 
+                    # Fallback to the order in the config file if name not in loader opt
+                    self.val_dataset_names[idx] = self.opt['datasets']['val_datasets'][idx]['name']
     
     def on_test_epoch_end(self):
         """Operations at the end of test epoch."""
