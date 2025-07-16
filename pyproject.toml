@@ -1,0 +1,59 @@
+# This file specifies the project's build system and core metadata.
+# It works alongside setup.py, which is still required for the
+# conditional C++ extension compilation logic.
+
+[build-system]
+# These are the build-time dependencies. `setuptools` is the build backend,
+# and `pybind11` is required to compile the C++ extension.
+requires = [
+    "setuptools>=61.0",
+    "pybind11",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+# --- Core Project Metadata (from setup.py) ---
+name = "xreflection"
+version = "0.1"
+description = "An Easy-to-use Toolbox for Single-image Reflection Removal"
+authors = [
+    { name = "Mingjia Li" },
+    { name = "Hainuo Wang" },
+    { name = "Jiarui Wang" },
+    { name = "Qiming Hu" },
+    { name = "Xiaojie Guo" },
+]
+readme = "README.md"  # It's good practice to have a README file.
+requires-python = ">=3.6"
+classifiers = [
+    'Programming Language :: Python :: 3',
+    'Programming Language :: C++',
+    'Operating System :: OS Independent',
+]
+# A license was not specified in setup.py. It is highly recommended to add one.
+# For example: license = { text = "MIT" }
+
+# --- Dependencies ---
+# This list is a consolidated version from requirements.txt and setup.py.
+# pybind11 is included as a runtime dependency because the compiled module
+# may depend on its stubs.
+dependencies = [
+    "pybind11",
+    "opencv-python",
+    "pillow",
+    "scipy",
+    "tqdm",
+    "torch",
+    "torchvision",
+    "pytorch-msssim",
+    "lightning",
+    "tensorboard",
+    "wandb>=0.12.10",
+]
+
+# [tool.setuptools]
+# This section configures the setuptools build backend.
+# The `packages.find` key is the modern equivalent of `find_packages()` in setup.py.
+[tool.setuptools.packages.find]
+where = ["."]  # search for packages in the project root
+
