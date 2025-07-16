@@ -4,8 +4,8 @@ import os
 
 # --- Conditional compilation logic ---
 # Check environment variable to optionally skip C++ extension compilation
-SKIP_COMPILATION_ENV_VAR = 'NO_COMPILE'
-SKIP_COMPILATION = os.environ.get(SKIP_COMPILATION_ENV_VAR, '0') == '1'
+SKIP_COMPILATION_ENV_VAR = 'COMPILE'
+SKIP_COMPILATION = os.environ.get(SKIP_COMPILATION_ENV_VAR, '0') == '0'
 
 ext_modules_list = []
 setup_requires_list = []
@@ -24,7 +24,7 @@ install_requires_list = [
 ]
 
 if SKIP_COMPILATION:
-    print(f"INFO: Skipping C++ extension compilation because environment variable {SKIP_COMPILATION_ENV_VAR}=1 is set.")
+    print(f"INFO: Skipping C++ extension compilation because environment variable {SKIP_COMPILATION_ENV_VAR}=0 is set.")
 else:
     # If we are compiling, pybind11 is a build-time dependency.
     # It's also good practice to list it in install_requires if the compiled
