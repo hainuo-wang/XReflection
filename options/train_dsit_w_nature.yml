@@ -3,7 +3,7 @@ name: train_sirs_dsit_w_nature
 is_train: true
 model_type: DSITModel  # Use DSIT Lightning module
 num_gpu: auto  # auto: can infer from your visible devices automatically
-manual_seed: 2023
+manual_seed: 42
 
 # Command line options integrated into config
 test_only: false          # Whether to only test the model
