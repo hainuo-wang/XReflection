@@ -7,7 +7,6 @@ manual_seed: 42
 
 # Command line options integrated into config
 test_only: false          # Whether to only test the model
-resume: null                   # Path to resume checkpoint, null for no resume
 precision: '32-true'      # Precision for training (32-true, 16-mixed, bf16-mixed)
 accelerator: 'auto'       # Accelerator type (auto, gpu, cpu)
 val_check_interval: 0.25   # Validation check interval

@@ -3,11 +3,10 @@ name: train_sirs_dsit_wo_nature
 is_train: true
 model_type: DSITModel  # Use DSIT Lightning module
 num_gpu: auto  # auto: can infer from your visible devices automatically
-manual_seed: 2024
+manual_seed: 42
 
 # Command line options integrated into config
 test_only: false          # Whether to only test the model
-resume: null              # Path to resume checkpoint, null for no resume
 precision: '32-true'      # Precision for training (32-true, 16-mixed, bf16-mixed)
 accelerator: 'auto'       # Accelerator type (auto, gpu, cpu)
 val_check_interval: 0.25   # Validation check interval
@@ -110,7 +109,7 @@ datasets:
 
       # data loader for validation
       use_shuffle: false
-      num_worker_per_gpu: 4
+      num_worker_per_gpu: 8
       batch_size_per_gpu: 1
 
 # network structures
