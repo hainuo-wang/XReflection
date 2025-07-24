@@ -61,6 +61,11 @@ python tools/train.py --config configs/train_config.yaml --resume pretrained.ckp
 python tools/train.py --config configs/train_config.yaml
 ```
 
+### Resume Training from a Checkpoint
+```python
+python tools/train.py --config configs/train_config.yaml --resume pretrained.ckpt
+```
+
 ### Data Preparation
 #### Training dataset
 * 7,643 images from the
