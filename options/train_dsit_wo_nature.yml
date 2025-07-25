@@ -146,9 +146,9 @@ train:
 
   # losses
   pixel_opt:
-    type: MSELoss
-    loss_weight: 1.0
-    reduction: mean
+    type: MultipleLoss
+    losses: [nn.MSELoss(), GradientLoss()]
+    weight: [0.3, 0.6]
 
   # perceptual loss (VGG-based)
   perceptual_opt:
