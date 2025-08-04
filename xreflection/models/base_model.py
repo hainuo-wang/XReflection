@@ -346,16 +346,16 @@ class BaseModel(L.LightningModule):
 
         # 3. Handle top epochs logic based on the grand average
         if 'psnr' in plain_avg_metrics:
-            self.top_psnr_epochs.append((plain_avg_metrics['psnr'], self.current_epoch))
+            self.top_psnr_epochs.append((plain_avg_metrics['psnr'], self.current_epoch, self.global_step))
             self.top_psnr_epochs.sort(key=lambda x: (x[0], x[1]), reverse=True)
             self.top_psnr_epochs = self.top_psnr_epochs[:self.opt['val'].get('save_img_top_n', 5)]
-            rank_zero_info(f'\t # The Best Average PSNR: {self.top_psnr_epochs[0][0]:.4f} at Epoch {self.top_psnr_epochs[0][1]}')
+            rank_zero_info(f'\t # The Best Average PSNR: {self.top_psnr_epochs[0][0]:.4f} at Epoch {self.top_psnr_epochs[0][1]} Step {self.top_psnr_epochs[0][2]}')
         
         if 'ssim' in plain_avg_metrics:
-            self.top_ssim_epochs.append((plain_avg_metrics['ssim'], self.current_epoch))
+            self.top_ssim_epochs.append((plain_avg_metrics['ssim'], self.current_epoch, self.global_step))
             self.top_ssim_epochs.sort(key=lambda x: (x[0], x[1]), reverse=True)
             self.top_ssim_epochs = self.top_ssim_epochs[:1]
-            rank_zero_info(f'\t # The Best Average SSIM: {self.top_ssim_epochs[0][0]:.4f} at Epoch {self.top_ssim_epochs[0][1]}\n')
+            rank_zero_info(f'\t # The Best Average SSIM: {self.top_ssim_epochs[0][0]:.4f} at Epoch {self.top_ssim_epochs[0][1]} Step {self.top_ssim_epochs[0][2]}\n')
 
         # 4. Clean up old images
         self._delete_images_not_in_top_psnr()
@@ -474,11 +474,11 @@ class BaseModel(L.LightningModule):
             save_dir = osp.join(self.opt['path']['visualization'], dataset_name, img_name)
             os.makedirs(save_dir, exist_ok=True)
             if self.opt['val'].get('suffix'):
-                save_clean_img_path = osp.join(save_dir, f'{img_name}_clean_{self.opt["val"]["suffix"]}_epoch_{self.current_epoch}.png')
-                save_reflection_img_path = osp.join(save_dir, f'{img_name}_reflection_{self.opt["val"]["suffix"]}_epoch_{self.current_epoch}.png')
+                save_clean_img_path = osp.join(save_dir, f'{img_name}_clean_{self.opt["val"]["suffix"]}_epoch_{self.current_epoch}_step_{self.global_step}.png')
+                save_reflection_img_path = osp.join(save_dir, f'{img_name}_reflection_{self.opt["val"]["suffix"]}_epoch_{self.current_epoch}_step_{self.global_step}.png')
             else:
-                save_clean_img_path = osp.join(save_dir, f'{img_name}_clean_{self.opt["name"]}_epoch_{self.current_epoch}.png')
-                save_reflection_img_path = osp.join(save_dir, f'{img_name}_reflection_{self.opt["name"]}_epoch_{self.current_epoch}.png')
+                save_clean_img_path = osp.join(save_dir, f'{img_name}_clean_{self.opt["name"]}_epoch_{self.current_epoch}_step_{self.global_step}.png')
+                save_reflection_img_path = osp.join(save_dir, f'{img_name}_reflection_{self.opt["name"]}_epoch_{self.current_epoch}_step_{self.global_step}.png')
             # 保存图像
             imwrite(clean_img, save_clean_img_path)
             imwrite(reflection_img, save_reflection_img_path)
@@ -486,7 +486,7 @@ class BaseModel(L.LightningModule):
             rank_zero_warn(f"Error saving validation images: {str(e)}")
     
     def _delete_images_not_in_top_psnr(self):
-        top_epochs_to_keep = [e for _, e in self.top_psnr_epochs]
+        top_epochs_and_steps_to_keep = [(e, s) for _, e, s in self.top_psnr_epochs]
         visualization_root_path = self.opt['path']['visualization']
 
         if not osp.isdir(visualization_root_path):
@@ -503,12 +503,12 @@ class BaseModel(L.LightningModule):
                 if not osp.isfile(file_path): # Ensure it's a file before attempting to process/delete
                     continue
                 
-                epoch_match = re.search(r'epoch_(\d+)', file_name)
-                if epoch_match:
-                    img_epoch = int(epoch_match.group(1))
+                epoch_and_step_match = re.search(r'epoch_(\d+)_step_(\d+)', file_name)
+                if epoch_and_step_match:
+                    img_epoch_step = (int(epoch_and_step_match.group(1)), int(epoch_and_step_match.group(2)))
 
                     # Protect images from the current epoch and those explicitly in top_epochs_to_keep
-                    if img_epoch == self.current_epoch or img_epoch in top_epochs_to_keep:
+                    if img_epoch_step[0] == self.current_epoch or img_epoch_step in top_epochs_and_steps_to_keep:
                         continue
                     
                     # If the epoch is not the current one and not in top_epochs_to_keep, delete it

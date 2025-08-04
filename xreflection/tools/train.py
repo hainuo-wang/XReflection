@@ -178,11 +178,12 @@ def create_callbacks(config):
     
     checkpoint_callback = ModelCheckpoint(
         dirpath=os.path.join(config['path']['experiments_root'], config['name'], 'checkpoints'),
-        filename='{epoch}-{' + monitor + ':.4f}',
+        filename='{epoch}-{step}-{' + monitor + ':.4f}',
         monitor=monitor,
         mode=mode,
         save_top_k=save_top_k,
         save_last=True,
+        save_on_train_epoch_end=False,
         verbose=True
     )
     callbacks.append(checkpoint_callback)
