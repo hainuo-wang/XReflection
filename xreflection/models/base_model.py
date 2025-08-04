@@ -486,7 +486,12 @@ class BaseModel(L.LightningModule):
             rank_zero_warn(f"Error saving validation images: {str(e)}")
     
     def _delete_images_not_in_top_psnr(self):
-        top_epochs_and_steps_to_keep = [(e, s) for _, e, s in self.top_psnr_epochs]
+        # Use a set for efficient lookup of image identifiers to keep.
+        # This includes the top N PSNR epochs and the current one.
+        ids_to_keep = set((e, s) for _, e, s in self.top_psnr_epochs)
+        current_id = (self.current_epoch, self.global_step)
+        ids_to_keep.add(current_id)
+
         visualization_root_path = self.opt['path']['visualization']
 
         if not osp.isdir(visualization_root_path):
@@ -495,26 +500,26 @@ class BaseModel(L.LightningModule):
 
         for root, _, files in os.walk(visualization_root_path):
             for file_name in files:
-                # Optional: filter for common image file extensions
+                # Filter for common image file extensions
                 if not file_name.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
                     continue
 
                 file_path = osp.join(root, file_name)
-                if not osp.isfile(file_path): # Ensure it's a file before attempting to process/delete
+                if not osp.isfile(file_path):
                     continue
                 
-                epoch_and_step_match = re.search(r'epoch_(\d+)_step_(\d+)', file_name)
-                if epoch_and_step_match:
-                    img_epoch_step = (int(epoch_and_step_match.group(1)), int(epoch_and_step_match.group(2)))
+                match = re.search(r'epoch_(\d+)_step_(\d+)', file_name)
+                if match:
+                    img_id = (int(match.group(1)), int(match.group(2)))
 
-                    # Protect images from the current epoch and those explicitly in top_epochs_to_keep
-                    if img_epoch_step[0] == self.current_epoch or img_epoch_step in top_epochs_and_steps_to_keep:
+                    # If the image identifier is in our set, keep it.
+                    if img_id in ids_to_keep:
                         continue
                     
-                    # If the epoch is not the current one and not in top_epochs_to_keep, delete it
+                    # Otherwise, delete the file.
                     try:
                         os.remove(file_path)
-                        # rank_zero_info(f"Deleted old image not in top PSNR epochs: {file_path}") # Optional: for verbose logging
+                        # rank_zero_info(f"Deleted old image not in top PSNR epochs: {file_path}")
                     except Exception as e:
                         # rank_zero_warn(f"Error deleting image {file_path}: {str(e)}")
                         pass
