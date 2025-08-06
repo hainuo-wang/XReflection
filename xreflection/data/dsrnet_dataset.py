@@ -37,7 +37,7 @@ def __scale_height(img, target_height):
     return img.resize((w, h), Image.BICUBIC)
 
 
-def paired_data_transforms(img_1, img_2, transfrom_size=224, unaligned_transforms=False):
+def paired_data_transforms(img_1, img_2, transform_size=224, unaligned_transforms=False):
     def get_params(img, output_size):
         w, h = img.size
         th, tw = output_size
@@ -48,7 +48,7 @@ def paired_data_transforms(img_1, img_2, transfrom_size=224, unaligned_transform
         j = random.randint(0, w - tw)
         return i, j, th, tw
 
-    target_size = int(random.randint(transfrom_size, transfrom_size * 2) / 2.) * 2
+    target_size = int(random.randint(transform_size, transform_size * 2) / 2.) * 2
     ow, oh = img_1.size
     if ow >= oh:
         img_1 = __scale_height(img_1, target_size)
@@ -66,7 +66,7 @@ def paired_data_transforms(img_1, img_2, transfrom_size=224, unaligned_transform
         img_1 = TF.rotate(img_1, angle)
         img_2 = TF.rotate(img_2, angle)
 
-    i, j, h, w = get_params(img_1, (transfrom_size, transfrom_size))
+    i, j, h, w = get_params(img_1, (transform_size, transform_size))
     img_1 = TF.crop(img_1, i, j, h, w)
 
     if unaligned_transforms:
@@ -158,7 +158,7 @@ class DSRDataset(BaseDataset):
 
     def data_synthesis(self, t_img, r_img):
         if self.enable_transforms:
-            t_img, r_img = paired_data_transforms(t_img, r_img, transfrom_size=self.transform_size)
+            t_img, r_img = paired_data_transforms(t_img, r_img, transform_size=self.transform_size)
 
         t_img, r_img, m_img = self.syn_model(t_img, r_img)
 
@@ -230,7 +230,7 @@ class DSRTestDataset(BaseDataset):
             t_img, m_img = self.align(t_img, m_img)
 
         if self.enable_transforms:
-            t_img, m_img = paired_data_transforms(t_img, m_img, transfrom_size=self.transform_size, 
+            t_img, m_img = paired_data_transforms(t_img, m_img, transform_size=self.transform_size, 
                                                   unaligned_transforms=self.unaligned_transforms)
 
 
