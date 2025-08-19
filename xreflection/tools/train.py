@@ -183,7 +183,7 @@ def create_callbacks(config):
         mode=mode,
         save_top_k=save_top_k,
         save_last=True,
-        save_on_train_epoch_end=True,
+        save_on_train_epoch_end=False,
         verbose=True
     )
     callbacks.append(checkpoint_callback)
