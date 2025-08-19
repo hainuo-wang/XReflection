@@ -36,8 +36,7 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=None, help='Random seed, overrides config if provided')
     
     # Optional overrides for quick testing/debugging without editing config
-    parser.add_argument('--test_only', action='store_true', help='Only test the model, overrides config')
-    parser.add_argument('--test_ckpt', type=str, default=None, help='Test from checkpoint, overrides config if provided')
+    parser.add_argument('--test_only', type=str, default=None, help='Only test the model, overrides config')
     parser.add_argument('--resume', nargs='?', const='_FIND_LAST_', default=None, 
                         help='Resume from checkpoint, overrides config if provided. If used without a path (e.g., --resume), it will try to find and load "last.ckpt".'
                              'If used with a path (e.g., --resume path/to/ckpt), it will load the specified checkpoint.')
@@ -317,8 +316,8 @@ def main():
     rank_zero_info(f"Configuration: {config}")
     
     # Test only or train + validate
-    if config.get('test_only', False):
-        trainer.test(model, datamodule=datamodule, ckpt_path=args.test_ckpt)
+    if args.test_only is not None:
+        trainer.test(model, datamodule=datamodule, ckpt_path=args.test_only)
     else:
         trainer.fit(model, datamodule=datamodule, ckpt_path=resume_path)
         if len(callbacks) > 0 and hasattr(callbacks[0], 'best_model_path'):

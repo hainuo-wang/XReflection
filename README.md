@@ -53,7 +53,7 @@ python setup.py develop
 
 ### Testing a Pretrained Model
 ```python
-python tools/train.py --config configs/train_config.yaml --test_only --test_ckpt pretrained.ckpt
+python tools/train.py --config configs/train_config.yaml --test_only pretrained.ckpt
 ```
 
 ### Training a Model
