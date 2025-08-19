@@ -53,7 +53,7 @@ python setup.py develop
 
 ### Testing a Pretrained Model
 ```python
-python tools/train.py --config configs/train_config.yaml --resume pretrained.ckpt --test_only
+python tools/train.py --config configs/train_config.yaml --test_only --test_ckpt pretrained.ckpt
 ```
 
 ### Training a Model
@@ -61,9 +61,14 @@ python tools/train.py --config configs/train_config.yaml --resume pretrained.ckp
 python tools/train.py --config configs/train_config.yaml
 ```
 
-### Resume Training from a Checkpoint
+### Resume Training
+#### from the last checkpoint
 ```python
-python tools/train.py --config configs/train_config.yaml --resume pretrained.ckpt
+python tools/train.py --config configs/train_config.yaml --resume
+```
+#### from the a specific checkpoint
+```python
+python tools/train.py --config configs/train_config.yaml --resume your_checkpoint_path.ckpt
 ```
 
 ### Data Preparation

@@ -37,7 +37,10 @@ def parse_args():
     
     # Optional overrides for quick testing/debugging without editing config
     parser.add_argument('--test_only', action='store_true', help='Only test the model, overrides config')
-    parser.add_argument('--resume', type=str, help='Resume from checkpoint, overrides config if provided')
+    parser.add_argument('--test_ckpt', type=str, default=None, help='Test from checkpoint, overrides config if provided')
+    parser.add_argument('--resume', nargs='?', const='_FIND_LAST_', default=None, 
+                        help='Resume from checkpoint, overrides config if provided. If used without a path (e.g., --resume), it will try to find and load "last.ckpt".'
+                             'If used with a path (e.g., --resume path/to/ckpt), it will load the specified checkpoint.')
     
     # General override mechanism - allows overriding any config setting from command line
     parser.add_argument('--override', nargs='+', default=[], 
@@ -218,7 +221,10 @@ def main():
     # Resume from checkpoint if specified
     resume_path = config['path'].get('resume_state', None)
     if args.resume is not None:
-        resume_path = args.resume
+        if args.resume == '_FIND_LAST_':
+            resume_path = os.path.join(exp_dir, 'checkpoints', 'last.ckpt')
+        else:
+            resume_path = args.resume
     
     # Create directories only on main process (rank 0)
     # Check if this is the main process using Lightning's utility
@@ -312,7 +318,7 @@ def main():
     
     # Test only or train + validate
     if config.get('test_only', False):
-        trainer.test(model, datamodule=datamodule, ckpt_path=resume_path)
+        trainer.test(model, datamodule=datamodule, ckpt_path=args.test_ckpt)
     else:
         trainer.fit(model, datamodule=datamodule, ckpt_path=resume_path)
         if len(callbacks) > 0 and hasattr(callbacks[0], 'best_model_path'):
