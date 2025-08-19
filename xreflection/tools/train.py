@@ -230,7 +230,7 @@ def main():
     is_main_process = L.fabric.utilities.rank_zero.rank_zero_only.rank == 0
     
     if is_main_process:
-        if os.path.exists(exp_dir) and resume_path is None:
+        if os.path.exists(exp_dir) and resume_path is None and args.test_only is None:
             os.rename(f"{exp_dir}", f"{exp_dir}_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
         # Create experiment directory
         os.makedirs(exp_dir, exist_ok=True)
