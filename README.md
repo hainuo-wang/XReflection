@@ -15,7 +15,7 @@ XReflection is a neat toolbox tailored for single-image reflection removal(SIRR)
 ---
 ## 🏆 Award
 
-Our team won the 1st place in the NTIRE 2025 Challenge on Single Image Reflection Removal in the Wild.
+Equipped with XReflection, our team won the 1st place in the NTIRE 2025 Challenge on Single Image Reflection Removal in the Wild.
 
 <div align="center"><img src="docs/_static/NTIRE.png" alt="NTIRE 2025 Award" width="80%"/></div>
 
@@ -23,7 +23,7 @@ Our team won the 1st place in the NTIRE 2025 Challenge on Single Image Reflectio
 
 ---
 ## 📰 News and Updates
-- **[2025-10-26]** DSIT is available in the model zoo. More models are on the way!
+- **[2025-10-26]** XReflection is now production-ready and have been applied to multiple research projects inside our team. DSIT is available in the model zoo. More models are on the way!
 - **[2025-07-16]** DSRNet is available in the model zoo. More models are on the way!
 - **[2025-05-26]** Release a training/testing pipeline. 
 
@@ -38,7 +38,6 @@ Our team won the 1st place in the NTIRE 2025 Challenge on Single Image Reflectio
 ## 📝 Introduction
 
 Please visit the [documentation](https://xreflection.readthedocs.io/en/latest/) for more features and usage.
-
 
 ---
 
@@ -100,9 +99,13 @@ Download all in one from https://checkpoints.mingjia.li/sirs.zip
 ## 🌟 Features in Detail
 
 ### Pretrained Model Zoo
-Access pretrained models for various SIRR algorithms:
-TODO
+The performance of previous methods are improved with our new training pipeline.
+Access pretrained models for various SIRR algorithms. More are on the way.
 
+|Model| Link| PSNR(dB)|
+|---|---|---|
+|DSRNet|https://checkpoints.mingjia.li/dsr-25.8915.ckpt|25.8915|
+|DSIT|https://checkpoints.mingjia.li/dsit-26.6959.ckpt| 26.6959|
 
 <!-- ---
 
