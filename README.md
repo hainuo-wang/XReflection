@@ -13,8 +13,17 @@ XReflection is a neat toolbox tailored for single-image reflection removal(SIRR)
 
 
 ---
-## 📰 News and Updates
+## 🏆 Award
 
+Our team won the 1st place in the NTIRE 2025 Challenge on Single Image Reflection Removal in the Wild.
+
+<div align="center"><img src="docs/_static/NTIRE.png" alt="NTIRE 2025 Award" width="80%"/></div>
+
+<br>
+
+---
+## 📰 News and Updates
+- **[2025-10-26]** DSIT is available in the model zoo. More models are on the way!
 - **[2025-07-16]** DSRNet is available in the model zoo. More models are on the way!
 - **[2025-05-26]** Release a training/testing pipeline. 
 
