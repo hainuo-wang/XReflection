@@ -98,9 +98,8 @@ def tensor2img(image_tensor, imtype=np.uint8):
     image_numpy = np.clip(image_numpy, 0, 1)
     if image_numpy.shape[0] == 1:
         image_numpy = np.tile(image_numpy, (3, 1, 1))
-    image_numpy = (np.transpose(image_numpy, (1, 2, 0))) * 255.0
+    image_numpy = (np.transpose(image_numpy, (1, 2, 0))[..., ::-1]) * 255.0
     # image_numpy = image_numpy.astype(imtype)
-    image_numpy = cv2.cvtColor(image_numpy.astype(np.uint8), cv2.COLOR_RGB2BGR)
     return image_numpy
 
 
