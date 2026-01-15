@@ -8,7 +8,7 @@ import torch
 import torch.nn as nn
 from timm.models.layers import trunc_normal_
 from xreflection.utils.registry import ARCH_REGISTRY
-from xreflection.archs.rdnet.classifier import PretrainedConvNext
+from xreflection.archs.rdnet.classifier import PretrainedConvNextV2
 from xreflection.archs.rdnet.focalnet import build_focalnet
 from xreflection.archs.rdnet.modules_sig import ConvNextBlock, Decoder, LayerNorm, NAFBlock, SimDecoder, UpSampleConvnext
 from xreflection.archs.rdnet.revcol_function import ReverseFunction
@@ -150,7 +150,7 @@ class StarReLU(nn.Module):
 
 
 @ARCH_REGISTRY.register()
-class RDNet(nn.Module):
+class RDNetNTIRE(nn.Module):
     def __init__(self, channels=[64, 128, 256, 512], layers=[2, 3, 6, 3], num_subnet=5, loss_col=4, kernel_size=3,
                  num_classes=1000,
                  drop_path=0.0, save_memory=True, 
@@ -175,11 +175,12 @@ class RDNet(nn.Module):
         channels.reverse()
         self.decoder_blocks = Decoder(depth=[1, 1, 1, 1], dim=channels, block_type=NAFBlock, kernel_size=3)
 
-        self.prompt=nn.Sequential(nn.Linear(in_features=6,out_features=512),
-                                  StarReLU(),
-                                  nn.Linear(in_features=512,out_features=64),
-                                  StarReLU(),
-                                  )
+        self.prompt = nn.Sequential(nn.Conv2d(in_channels=768,
+                                              out_channels=512,
+                                              kernel_size=1),
+                                    StarReLU(),
+                                    nn.Conv2d(512, 64, kernel_size=1)
+                                    )
         pretrained_cls_path = pretrained_models.pop('cls_model', None)
         pretrained_base_network_path = pretrained_models.pop('base_network', None)
         
@@ -192,7 +193,7 @@ class RDNet(nn.Module):
 
 
         self.baseball = build_focalnet('focalnet_L_384_22k_fl4')
-        self.classifier = PretrainedConvNext()
+        self.classifier = PretrainedConvNextV2()
         
         for param in self.classifier.parameters():
             param.requires_grad = False
@@ -242,10 +243,9 @@ class RDNet(nn.Module):
         # x_in = x
         with torch.no_grad():
             self.classifier.eval()
-            alpha = self.classifier(x_in)
-        prompt_alpha = self.prompt(alpha)
-        prompt_alpha = prompt_alpha.unsqueeze(-1).unsqueeze(-1)
-        x = prompt_alpha * x_stem
+            prompt = self.classifier(x_in)
+        prompt = self.prompt(prompt)
+        x = prompt * x_stem
         for i in range(self.num_subnet):
             c0, c1, c2, c3 = getattr(self, f'subnet{str(i)}')(x, c0, c1, c2, c3)
             if i > (self.num_subnet - self.Loss_col):
@@ -284,4 +284,3 @@ if __name__ == '__main__':
     torch.cuda.synchronize(device)
     out = model(inp)
     print(out[1][0].shape)
-
