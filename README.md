@@ -106,7 +106,7 @@ Access pretrained models for various SIRR algorithms. More are on the way.
 |---|---|---|
 |DSRNet|https://checkpoints.mingjia.li/dsr-25.8915.ckpt|25.8915|
 |DSIT|https://checkpoints.mingjia.li/dsit-26.6959.ckpt| 26.6959|
-
+|RDNet|https://checkpoints.mingjia.li/rdnet-26.4849.ckpt| 26.4849|
 <!-- ---
 
 ## 📄 Citation
