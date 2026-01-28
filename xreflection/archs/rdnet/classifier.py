@@ -47,8 +47,9 @@ def checkpoint_filter_fn(state_dict, model):
     return out_dict
 
 class PretrainedConvNext(nn.Module):
-    def __init__(self, model_name='convnext_base', pretrained=True):
+    def __init__(self, model_name='convnext_small', pretrained=True):
         super(PretrainedConvNext, self).__init__()
+        model_name = 'convnext_small'
         # Load the pretrained ConvNext model from timm
         self.model = timm.create_model(model_name, pretrained=False, num_classes=0)
         self.head = nn.Linear(768, 6)
@@ -108,3 +109,4 @@ if __name__ == "__main__":
     output_x, output_y = model(dummy_input)
     print("Output shape:", output_x.shape)
     print("Test completed successfully.")
+
