@@ -1,6 +1,6 @@
 # general settings
 name: train_sirs_lightning
-model_type: ClsModel  # Use Lightning module instead of vanilla model
+model_type: RDNetModel  # Use Lightning module instead of vanilla model
 num_gpu: auto  # auto: can infer from your visible devices automatically
 manual_seed: 42
 
@@ -119,7 +119,7 @@ datasets:
 
 # network structures
 network_g:
-  type: FullNet_NLP
+  type: RDNetNTIRE
   channels: [ 64, 128, 256, 512 ]
   layers: [ 2, 2, 4, 2 ]
   num_subnet: 4
