@@ -23,6 +23,7 @@ Equipped with XReflection, our team won the 1st place in the NTIRE 2025 Challeng
 
 ---
 ## 📰 News and Updates
+- **[2025-10-26]** DIRS, built upon XReflection, is now open-sourced: https://github.com/mingcv/DIRS
 - **[2025-10-26]** XReflection is now production-ready and have been applied to multiple research projects inside our team. DSIT is available in the model zoo. More models are on the way!
 - **[2025-07-16]** DSRNet is available in the model zoo. More models are on the way!
 - **[2025-05-26]** Release a training/testing pipeline. 
